@@ -1,6 +1,6 @@
-# 🦈 Firefish Analytics EXPLORER
+# Firefish EXPLORER
 
-A powerful, privacy-first, client-side dashboard for analyzing your investments and loans on the [Firefish.io](https://firefish.io) platform. 
+A powerful, privacy-first, client-side dashboard for analyzing your investments and loans on the [Firefish.io](https://firefish.io?ref=satoshi1351) platform. 
 
 ![Firefish Explorer Dashboard](screenshot.jpg)
 
