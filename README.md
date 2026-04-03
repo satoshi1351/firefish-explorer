@@ -2,7 +2,7 @@
 
 A powerful, privacy-first, client-side dashboard for analyzing your investments and loans on the [Firefish.io](https://firefish.io) platform. 
 
-![Firefish Explorer Dashboard](screenshot.jpg)
+![Firefish Explorer Dashboard](screenshot.jpeg)
 
 ## 🌟 Why Firefish Explorer?
 The official Firefish platform is great, but as your portfolio grows, you need advanced analytics, risk management, and market simulations. Firefish Explorer takes your raw CSV data and turns it into a professional financial dashboard—**all without your data ever leaving your computer.**
