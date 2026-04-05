@@ -18,17 +18,22 @@ The official Firefish platform is great, but as your portfolio grows, you need a
 - **Multi-language:** Auto-detects your browser language.
 - **Dark/Light Mode:** Because staring at numbers should be easy on the eyes.
 
-##  How to Use (Quick Start)
+## How to Use (Quick Start)
 
-You don't need to install anything or set up a server.
+You don't need to install anything or set up a server. Choose the method that suits you best:
 
+### Option 1: Use the Live Web App (Easiest)
+1. Open the live application directly: **[Firefish EXPLORER](https://satoshi1351.github.io/firefish-explorer/)**
+2. **Export your data:** Go to your Firefish account and export your loans/investments as a `.csv` file.
+3. **Upload:** Drop the `.csv` file into the Explorer. 
+4. *Enjoy your insights!*
+
+### Option 2: Run Locally on Your Computer
 1. **Download the project** (Clone the repo or download as ZIP).
 2. **Open `index.html`** directly in your modern web browser (Chrome, Edge, Firefox, Safari).
-3. **Export your data:** Go to your Firefish account and export your loans/investments as a `.csv` file.
-4. **Upload:** Drop the `.csv` file into the Explorer. 
-5. *Enjoy your insights!*
+3. **Export and Upload:** Follow steps 2 and 3 from Option 1 above.
 
-##  Tech Stack
+## Tech Stack
 - Vanilla JavaScript (ES6+)
 - HTML5 & CSS3
 - [Bootstrap 5.3](https://getbootstrap.com/) for responsive UI
