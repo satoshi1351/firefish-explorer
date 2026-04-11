@@ -149,6 +149,10 @@ const translations = {
         "kpi_top_col": "Top collaterals",
         "kpi_no_col": "No collateral.",
         "kpi_lbl_col_amt": "TOTAL COLLATERAL",
+        "insight_rescue_add": "You have <strong>{count} at-risk loan(s)</strong>. To return to safety (below {target}% LTV), you need to add:",
+        "insight_rescue_add_inv": "You have <strong>{count} at-risk investment(s)</strong>. To secure them (below {target}% LTV), borrowers must add:",
+        "insight_liquidated_label": "Liquidation (LTV ≥ 95%):",
+        "insight_liquidated_badge": "LIQUIDATED",
     },
 
     // SLOVENČINA
@@ -301,6 +305,10 @@ const translations = {
         "kpi_top_col": "Najväčšie kolaterály",
         "kpi_no_col": "Žiadny kolaterál.",
         "kpi_lbl_col_amt": "KOLATERÁL CELKOM",
+        "insight_rescue_add": "Máš <strong>{count} ohrozenú pôžičku/y</strong>. Pre návrat do bezpečia (pod {target} % LTV) musíš doložiť:",
+        "insight_rescue_add_inv": "Máš <strong>{count} ohrozenú investíciu/ie</strong>. Pre ich bezpečie (pod {target} % LTV) musia dlžníci doložiť:",
+        "insight_liquidated_label": "Likvidácia (LTV ≥ 95%):",
+        "insight_liquidated_badge": "ZLIKVIDOVANÁ",
                 
     },
 
@@ -450,6 +458,10 @@ const translations = {
     "kpi_top_col": "Top zajištění",
     "kpi_no_col": "Žádné zajištění.",
     "kpi_lbl_col_amt": "CELKOVÉ ZAJIŠTĚNÍ",
+    "insight_rescue_add": "Máš <strong>{count} ohroženou/é půjčku/y</strong>. Pro návrat do bezpečí (pod {target} % LTV) musíš doplnit:",
+    "insight_rescue_add_inv": "Máš <strong>{count} ohroženou/é investici/e</strong>. Pro jejich bezpečí (pod {target} % LTV) musí dlužníci doplnit:",
+    "insight_liquidated_label": "Likvidace (LTV ≥ 95%):",
+    "insight_liquidated_badge": "ZLIKVIDOVANÁ",
 },
 
 de: {
@@ -598,6 +610,10 @@ de: {
     "kpi_top_col": "Top Sicherheiten",
     "kpi_no_col": "Keine Sicherheiten.",
     "kpi_lbl_col_amt": "GESAMTSICHERHEIT",
+    "insight_rescue_add": "Du hast <strong>{count} gefährdete(n) Kredit(e)</strong>. Um wieder sicher zu sein (unter {target}% LTV), musst du hinzufügen:",
+    "insight_rescue_add_inv": "Du hast <strong>{count} gefährdete Investition(en)</strong>. Um sie zu sichern (unter {target}% LTV), müssen Kreditnehmer hinzufügen:",
+    "insight_liquidated_label": "Liquidation (LTV ≥ 95%):",
+    "insight_liquidated_badge": "LIQUIDIERT",
 },
 
 pl: {
@@ -746,6 +762,10 @@ pl: {
     "kpi_top_col": "Największe zabezpieczenia",
     "kpi_no_col": "Brak zabezpieczenia.",
     "kpi_lbl_col_amt": "CAŁKOWITE ZABEZPIECZENIE",
+    "insight_rescue_add": "Masz <strong>{count} zagrożoną/e pożyczkę/i</strong>. Aby wrócić do bezpiecznego poziomu (poniżej {target}% LTV), musisz dodać:",
+    "insight_rescue_add_inv": "Masz <strong>{count} zagrożoną/e inwestycję/e</strong>. Aby je zabezpieczyć (poniżej {target}% LTV), pożyczkobiorcy muszą dodać:",
+    "insight_liquidated_label": "Likwidacja (LTV ≥ 95%):",
+    "insight_liquidated_badge": "ZLIKWIDOWANA",
 },
 
 hu: {
@@ -894,6 +914,10 @@ hu: {
     "kpi_top_col": "Legnagyobb fedezetek",
     "kpi_no_col": "Nincs fedezet.",
     "kpi_lbl_col_amt": "TELJES FEDEZET",
+    "insight_rescue_add": "Van <strong>{count} kockázatos hiteled</strong>. A biztonságos szinthez ( {target}% LTV alatt) ennyit kell hozzáadnod:",
+    "insight_rescue_add_inv": "Van <strong>{count} kockázatos befektetésed</strong>. A biztonságukhoz ( {target}% LTV alatt) a hitelfelvevőknek ennyit kell hozzáadniuk:",
+    "insight_liquidated_label": "Likvidáció (LTV ≥ 95%):",
+    "insight_liquidated_badge": "LIKVIDÁLVA",
 },
 
 es: {
@@ -1042,6 +1066,10 @@ es: {
     "kpi_top_col": "Principales colaterales",
     "kpi_no_col": "Sin colateral.",
     "kpi_lbl_col_amt": "COLATERAL TOTAL",
+    "insight_rescue_add": "Tienes <strong>{count} préstamo(s) en riesgo</strong>. Para volver a una zona segura (por debajo de {target}% LTV), debes añadir:",
+    "insight_rescue_add_inv": "Tienes <strong>{count} inversión(es) en riesgo</strong>. Para asegurarla(s) (por debajo de {target}% LTV), los prestatarios deben añadir:",
+    "insight_liquidated_label": "Liquidación (LTV ≥ 95%):",
+    "insight_liquidated_badge": "LIQUIDADO",
 },
 
 it: {
@@ -1190,6 +1218,10 @@ it: {
     "kpi_top_col": "Principali garanzie",
     "kpi_no_col": "Nessuna garanzia.",
     "kpi_lbl_col_amt": "GARANZIA TOTALE",
+    "insight_rescue_add": "Hai <strong>{count} prestito/i a rischio</strong>. Per tornare in sicurezza (sotto {target}% LTV), devi aggiungere:",
+    "insight_rescue_add_inv": "Hai <strong>{count} investimento/i a rischio</strong>. Per metterli in sicurezza (sotto {target}% LTV), i mutuatari devono aggiungere:",
+    "insight_liquidated_label": "Liquidazione (LTV ≥ 95%):",
+    "insight_liquidated_badge": "LIQUIDATO",
 },
 
 zh_tw: {
@@ -1338,6 +1370,10 @@ zh_tw: {
     "kpi_top_col": "主要抵押品",
     "kpi_no_col": "沒有抵押品。",
     "kpi_lbl_col_amt": "總抵押量",
+    "insight_rescue_add": "你有 <strong>{count} 筆風險貸款</strong>。為了回到安全區（低於 {target}% LTV），你需要補充：",
+    "insight_rescue_add_inv": "你有 <strong>{count} 筆風險投資</strong>。為了確保安全（低於 {target}% LTV），借款人需要補充：",
+    "insight_liquidated_label": "清算（LTV ≥ 95%）：",
+    "insight_liquidated_badge": "已清算",
 },
 
 no: {
@@ -1486,6 +1522,10 @@ no: {
     "kpi_top_col": "Største sikkerheter",
     "kpi_no_col": "Ingen sikkerhet.",
     "kpi_lbl_col_amt": "TOTAL SIKKERHET",
+    "insight_rescue_add": "Du har <strong>{count} lån i risiko</strong>. For å komme tilbake til sikker sone (under {target}% LTV), må du legge til:",
+    "insight_rescue_add_inv": "Du har <strong>{count} investering(er) i risiko</strong>. For å sikre dem (under {target}% LTV), må låntakerne legge til:",
+    "insight_liquidated_label": "Likvidasjon (LTV ≥ 95%):",
+    "insight_liquidated_badge": "LIKVIDERT",
 },
 fr: {
     "app_title": "Firefish EXPLORER",
@@ -1633,6 +1673,10 @@ fr: {
     "kpi_top_col": "Principales garanties",
     "kpi_no_col": "Aucune garantie.",
     "kpi_lbl_col_amt": "GARANTIE TOTALE",
+    "insight_rescue_add": "Vous avez <strong>{count} prêt(s) à risque</strong>. Pour revenir en zone sûre (sous {target}% LTV), vous devez ajouter :",
+    "insight_rescue_add_inv": "Vous avez <strong>{count} investissement(s) à risque</strong>. Pour les sécuriser (sous {target}% LTV), les emprunteurs doivent ajouter :",
+    "insight_liquidated_label": "Liquidation (LTV ≥ 95%) :",
+    "insight_liquidated_badge": "LIQUIDÉ",
 }
 
 };

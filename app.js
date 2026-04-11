@@ -825,6 +825,71 @@ function updateAIInsight(m) {
         aiIcon.classList.add('bi-robot', 'text-secondary');
     } else if (isStressed && m.capitalAtRisk > 0) {
         const stressedPrice = (state.currentBtcPrice * (1 + stressPct / 100)).toLocaleString('sk-SK', {maximumFractionDigits: 0});
+        
+        // --- NOVÝ KÓD: ZÁCHRANNÉ KOLESO PRE OBOCH (INVESTOR AJ DLŽNÍK) ---
+        if (state.displayData.length > 0) {
+            const simPrice = state.currentBtcPrice * (1 + stressPct / 100);
+            let riskyLoansDetails = [];
+            let liquidatedDetails = [];
+
+            state.displayData.forEach(item => {
+                if (!item.isActive || item.collateralBtc <= 0) return;
+                const itemLTV = (item.due / (item.collateralBtc * simPrice)) * 100;
+
+                if (itemLTV >= 95) { 
+                    // ZLIKVIDOVANÉ
+                    liquidatedDetails.push(`Zmluva <span class="fw-bold">${item.id}</span>: <span class="badge bg-dark text-danger border border-danger">${t('insight_liquidated_badge') || 'ZLIKVIDOVANÁ'}</span>`);
+                } else if (itemLTV > RISK_THRESHOLDS.LTV_HIGH) { 
+                    // OHROZENÉ
+                    const targetSafeLTV = 70; 
+                    const neededCollateral = (item.due * 100) / (targetSafeLTV * simPrice);
+                    const toAddForThisLoan = Math.max(0, neededCollateral - item.collateralBtc);
+                    
+                    // Text sa mení podľa toho, či to pozerá investor alebo dlžník
+                    const actionText = isInv ? '<span class="text-muted text-micro">Dlžník musí doložiť:</span> ' : '+';
+                    
+                    riskyLoansDetails.push(`Zmluva <span class="fw-bold">${item.id}</span>: ${actionText}<strong>${toAddForThisLoan.toFixed(4)} BTC</strong>`);
+                }
+            });
+
+            if (liquidatedDetails.length > 0 || riskyLoansDetails.length > 0) {
+                let combinedHtml = '';
+
+                // 1. Zlikvidované
+                if (liquidatedDetails.length > 0) {
+                    combinedHtml += `<div class="mb-2"><strong class="text-danger">${t('insight_liquidated_label') || 'Likvidácia (LTV ≥ 95%):'}</strong><ul class="mb-1 mt-1 ps-3" style="font-size: 0.9em;"><li>${liquidatedDetails.join('</li><li>')}</li></ul></div>`;
+                }
+
+                // 2. Ohrozené
+                if (riskyLoansDetails.length > 0) {
+                    let prefix = '';
+                    if (isInv) {
+                        prefix = (t('insight_rescue_add_inv') || `Máš <strong>{count} ohrozenú investíciu/ie</strong>. Pre ich bezpečie musia dlžníci doložiť:`)
+                            .replace('{count}', riskyLoansDetails.length)
+                            .replace('{target}', 70);
+                    } else {
+                        prefix = (t('insight_rescue_add') || `Máš <strong>{count} ohrozenú pôžičku/y</strong>. Pre návrat do bezpečia (pod {target} % LTV) musíš doložiť:`)
+                            .replace('{count}', riskyLoansDetails.length)
+                            .replace('{target}', 70);
+                    }
+                    
+                    combinedHtml += `<div>${prefix}<ul class="mb-0 mt-1 ps-3" style="font-size: 0.9em; opacity: 0.9;"><li>${riskyLoansDetails.join('</li><li>')}</li></ul></div>`;
+                }
+
+                aiMessage.innerHTML = combinedHtml;
+                insightBox.classList.add('danger');
+                
+                if (liquidatedDetails.length > 0) {
+                    aiIcon.className = 'bi fs-4 me-3 bi-x-octagon-fill text-danger';
+                } else {
+                    aiIcon.className = 'bi fs-4 me-3 bi-life-preserver text-danger';
+                }
+                
+                return; // Skončíme tu
+            }
+        }
+        // --- KONIEC NOVÉHO KÓDU ---
+
         aiMessage.innerHTML = `${t('ai_stress_warn1')} ${stressPct}% → ${stressedPrice} ${state.currencySymbol}): <strong>${m.capitalAtRisk.toLocaleString('sk-SK')} ${state.currencySymbol}</strong> ${t('ai_stress_warn2')} ${RISK_THRESHOLDS.LTV_HIGH}%). ${t('ai_stress_warn3')} ${m.riskCapitalPct.toFixed(1)}% ${isInv ? t('ai_inv') : t('ai_bor')}.`;
         insightBox.classList.add('danger');
         aiIcon.classList.add('bi-exclamation-triangle-fill', 'text-danger');
