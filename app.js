@@ -1192,12 +1192,15 @@ document.getElementById('btnSaveSimulation').addEventListener('click', async fun
     const invId = role === 'investor' ? (state.myId || 'JA') : t('sim_lender');
     const borId = role === 'borrower' ? (state.myId || 'JA') : t('sim_borrower');
 
+    const calculatedCollateral = (state.currentBtcPrice > 0) ? ((due / 0.50) / state.currentBtcPrice) : 0;
+    const calculatedLiqPrice = (calculatedCollateral > 0) ? (due / (calculatedCollateral * 0.95)) : 0;
+
     const simLoan = {
         id: 'SIM-' + Math.floor(Math.random() * 10000), 
         invested: amount, due: due, rate: rate, status: 'ACTIVE', profit: profit,
         isClosed: false, isActive: true, cashflowMonth: `${endDate.getFullYear()}-${(endDate.getMonth() + 1).toString().padStart(2, '0')}`,
-        liquidationPrice: (state.currentBtcPrice > 0) ? (due / 0.95) / (due / 0.50 / state.currentBtcPrice) : 0, 
-        collateralBtc: (state.currentBtcPrice > 0) ? ((due / 0.50) / state.currentBtcPrice) : 0, 
+        liquidationPrice: calculatedLiqPrice, 
+        collateralBtc: calculatedCollateral, 
         annualYield: rate, ltv: 50, distancePct: 0,
         investorId: invId, borrowerId: borId, role: role,
         startDate: today, endDate: endDate, progressPct: 0, 
