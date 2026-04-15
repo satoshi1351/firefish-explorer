@@ -65,23 +65,30 @@
                 <div class="d-flex flex-wrap flex-sm-nowrap align-items-center gap-2">
                     <input type="file" id="csvFileInput" accept=".csv" class="form-control form-control-sm shadow-sm csv-file-input" aria-label="Nahrať CSV">
 
-<select id="statusFilter" class="form-select form-select-sm shadow-sm w-auto" aria-label="Filter statusu" title="Filtrovať pôžičky" disabled>
+                    <select id="statusFilter" class="form-select form-select-sm shadow-sm w-auto" aria-label="Filter statusu" title="Filtrovať pôžičky" disabled>
                         <option value="ALL" data-i18n="filter_all">Všetky</option>
                         <option value="ACTIVE" data-i18n="filter_active" selected>Aktívne</option>
                         <option value="CLOSED" data-i18n="filter_closed">Ukončené</option>
                     </select>
 
                     <div class="btn-group btn-group-sm shadow-sm" role="group" id="roleToggleGroup">
-                        <input type="radio" class="btn-check" name="roleToggle" id="roleInvestor" value="investor" autocomplete="off" checked disabled>
-                        <label class="btn btn-outline-secondary fw-medium" for="roleInvestor" title="Zobraziť moje investície" data-i18n="role_investor">📈 Investície</label>
+    <input type="radio" class="btn-check" name="roleToggle" id="roleInvestor" value="investor" autocomplete="off" checked disabled>
+    <label class="btn btn-outline-secondary fw-medium" for="roleInvestor" title="Zobraziť moje investície">
+        <i class="bi bi-bar-chart-fill me-1"></i> <span data-i18n="role_investor">Investície</span>
+    </label>
 
-                        <input type="radio" class="btn-check" name="roleToggle" id="roleBorrower" value="borrower" autocomplete="off" disabled>
-                        <label class="btn btn-outline-secondary fw-medium" for="roleBorrower" title="Zobraziť moje dlhy" data-i18n="role_borrower">🤝 Pôžičky</label>
-                    </div>
+    <input type="radio" class="btn-check" name="roleToggle" id="roleBorrower" value="borrower" autocomplete="off" disabled>
+    <label class="btn btn-outline-secondary fw-medium" for="roleBorrower" title="Zobraziť moje dlhy">
+        <i class="bi bi-currency-exchange me-1"></i> <span data-i18n="role_borrower">Pôžičky</span>
+    </label>
+</div>
 
-                    <button class="btn btn-sm btn-outline-primary shadow-sm text-nowrap" id="btnOpenSimulation" data-bs-toggle="modal" data-bs-target="#simulationModal" disabled>
-                        <i class="bi bi-plus-circle"></i> <span data-i18n="btn_plan">Plánovať</span>
-                    </button>
+<button class="btn btn-sm btn-outline-primary shadow-sm text-nowrap" id="btnOpenSimulation" data-bs-toggle="modal" data-bs-target="#simulationModal" disabled>
+    <i class="bi bi-plus-circle me-1"></i> <span data-i18n="btn_plan">Plánovať</span>
+</button>
+<button class="btn btn-sm btn-outline-warning shadow-sm text-nowrap" id="btnOpenAnalytics" data-bs-toggle="modal" data-bs-target="#analyticsModal" disabled>
+    <i class="bi bi-tools me-1"></i> <span data-i18n="btn_analytics">Nástroje</span>
+</button>
                 </div>
             </div>
 
@@ -245,7 +252,8 @@
                     </div>
                 </div>
             </div>
-</div>
+        </div>
+        
         <div class="row g-3 mb-4">
             <div class="col-lg-6">
                 <div class="chart-container">
@@ -433,7 +441,204 @@
     </div>
 </div>
 
+<div class="modal fade" id="analyticsModal" tabindex="-1" aria-labelledby="analyticsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-bottom border-light-subtle bg-body-tertiary">
+                <h1 class="modal-title fs-5 fw-bold" id="analyticsModalLabel">
+                    <i class="bi bi-tools text-warning me-2"></i><span data-i18n="modal_analytics_title">Firefish EXPLORER Nástroje</span>
+                </h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zavrieť"></button>
+            </div>
+            <div class="modal-body bg-body-tertiary pt-2">
+                <ul class="nav nav-pills mb-3 nav-justified bg-body p-1 rounded shadow-sm border border-light-subtle" id="analyticsTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-bold" id="compass-tab" data-bs-toggle="tab" data-bs-target="#compass-pane" type="button" role="tab"><i class="bi bi-compass me-1"></i> <span data-i18n="tab_compass">Trhový Kompas</span></button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold" id="hodl-tab" data-bs-toggle="tab" data-bs-target="#hodl-pane" type="button" role="tab"><i class="bi bi-piggy-bank me-1"></i> <span data-i18n="tab_hodl">HODL vs Investovať</span></button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold d-flex align-items-center justify-content-center" id="duel-tab" data-bs-toggle="tab" data-bs-target="#duel-pane" type="button" role="tab">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-1">
+                                <polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"></polyline>
+                                <line x1="13" y1="19" x2="19" y2="13"></line>
+                                <line x1="16" y1="16" x2="20" y2="20"></line>
+                                <line x1="19" y1="21" x2="21" y2="19"></line>
+                                <polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"></polyline>
+                                <line x1="5" y1="14" x2="9" y2="18"></line>
+                                <line x1="7" y1="17" x2="4" y2="20"></line>
+                                <line x1="3" y1="19" x2="5" y2="21"></line>
+                            </svg>
+                            <span data-i18n="tab_duel">Súboj investícií</span>
+                        </button>
+                    </li>
+                </ul>
+                <div class="tab-content bg-body p-4 rounded-3 shadow-sm border border-light-subtle" id="analyticsTabContent">
+                    
+                    <div class="tab-pane fade show active" id="compass-pane" role="tabpanel" tabindex="0">
+                        <div class="text-center">
+                            <h5 class="fw-bold mb-1" data-i18n="compass_title">Kto má dnes na trhu výhodu?</h5>
+                            <p class="text-muted text-small mb-4" data-i18n="compass_desc">Smart analýza sentimentu pomocou Crypto Fear & Greed Indexu.</p>
+                            
+                            <div id="compassMeter" class="mb-4">
+                                <div class="spinner-border text-warning" role="status"></div>
+                            </div>
+
+                            <div id="compassInsight" class="alert text-start mb-0">
+                                Načítavam trhové dáta...
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="hodl-pane" role="tabpanel" tabindex="0">
+                        <div class="row g-4">
+                            <div class="col-md-5 border-end border-light-subtle">
+                                <h6 class="fw-bold text-body-emphasis mb-3"><i class="bi bi-sliders me-2"></i><span data-i18n="hodl_input_title">Tvoj odhad</span></h6>
+                                
+                                <div class="mb-3">
+                                    <label class="text-micro fw-bold text-muted mb-1" data-i18n="hodl_inv_amount">PLÁNOVANÁ INVESTÍCIA</label>
+                                    <div class="input-group input-group-sm shadow-sm">
+                                        <input type="number" class="form-control fw-bold text-dark" id="hodlAmount" value="10000" min="100" step="100">
+                                        <span class="input-group-text bg-body-tertiary" id="hodlCurrencySymbol">€</span>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="text-micro fw-bold text-muted mb-1" data-i18n="hodl_ff_yield">ÚROK NA FIREFISH (% p.a.)</label>
+                                    <input type="number" class="form-control form-control-sm fw-bold text-dark shadow-sm" id="hodlYield" value="10.5" min="1" step="0.1">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="text-micro fw-bold text-muted mb-1" data-i18n="hodl_duration">DĹŽKA OBDOBIA</label>
+                                    <select class="form-select form-select-sm fw-bold text-dark shadow-sm" id="hodlDuration">
+                                        <option value="3">3 mesiace</option>
+                                        <option value="6">6 mesiacov</option>
+                                        <option value="12" selected>12 mesiacov</option>
+                                        <option value="18">18 mesiacov</option>
+                                        <option value="24">24 mesiacov</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3 pt-2 border-top border-light-subtle">
+                                    <label class="text-micro fw-bold text-muted mb-1 d-flex justify-content-between">
+                                        <span data-i18n="hodl_expected_btc">OČAKÁVANÁ CENA BTC (na konci obdobia)</span>
+                                    </label>
+                                    <input type="range" class="form-range" id="hodlPriceSlider" step="500">
+                                    <div class="text-center mt-1">
+                                        <span class="badge bg-primary fs-6 shadow-sm" id="hodlFuturePriceLabel">80 000 €</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-7">
+                                <h6 class="fw-bold text-body-emphasis mb-3"><i class="bi bi-trophy me-2"></i><span data-i18n="hodl_result_title">Očakávaný výsledok</span></h6>
+                                
+                                <div id="hodlWinnerAlert" class="alert alert-success shadow-sm py-2 mb-4">
+                                    Načítavam dáta...
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-end mb-1">
+                                    <span class="fw-bold text-body-emphasis" data-i18n="hodl_ff_strategy">Firefish Investícia</span>
+                                    <span class="fs-5 fw-bold text-success" id="hodlFirefishProfit">+ 0 €</span>
+                                </div>
+                                <div class="progress mb-3 bg-body-secondary shadow-sm progress-hodl">
+                                    <div class="progress-bar bg-success" id="barFirefish"></div>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-end mb-1 mt-2">
+                                    <span class="fw-bold text-body-emphasis" data-i18n="hodl_hodl_strategy">Kúpa a držanie BTC (HODL)</span>
+                                    <span class="fs-5 fw-bold text-warning" id="hodlBtcProfit">+ 0 €</span>
+                                </div>
+                                <div class="progress mb-4 bg-body-secondary shadow-sm progress-hodl">
+                                    <div class="progress-bar bg-warning text-dark fw-bold" id="barHODL"></div>
+                                </div>
+
+                                <div class="alert alert-secondary bg-body-tertiary border-light-subtle text-small py-2 mb-0 mt-auto">
+                                    <i class="bi bi-info-circle me-1"></i> <span data-i18n="hodl_break_even">Bod zlomu (Break-even): Aby sa oplatil HODL, cena BTC musí stúpnuť nad</span> <strong id="hodlBreakEven" class="text-body-emphasis">0 €</strong>.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="duel-pane" role="tabpanel" tabindex="0">
+                        <div class="text-center mb-4">
+                            <h5 class="fw-bold mb-1 text-body-emphasis" data-i18n="duel_title">A/B Porovnávač príležitostí</h5>
+                            <p class="text-muted text-small" data-i18n="duel_desc">Zisti, ktorá ponuka ti prinesie lepšie zhodnotenie času a kapitálu.</p>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <div class="p-3 border border-primary-subtle rounded-3 bg-body-tertiary shadow-sm">
+                                    <h6 class="fw-bold text-primary mb-3"><i class="bi bi-a-circle me-1"></i><span data-i18n="duel_loan_a">Investícia A</span></h6>
+                                    <div class="d-flex gap-2 mb-2">
+                                        <div class="w-50">
+                                            <label class="text-micro text-muted fw-bold" data-i18n="duel_amount">Vklad</label>
+                                            <input type="number" class="form-control form-control-sm" id="duelAmtA" value="10000" min="100" step="100">
+                                        </div>
+                                        <div class="w-50">
+                                            <label class="text-micro text-muted fw-bold" data-i18n="duel_rate">Úrok (%)</label>
+                                            <input type="number" class="form-control form-control-sm" id="duelRateA" value="6.0" min="1" step="0.1">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="text-micro text-muted fw-bold" data-i18n="duel_months">Mesiacov</label>
+                                        <input type="number" class="form-control form-control-sm" id="duelMonthsA" value="12" min="1" step="1">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="p-3 border border-info-subtle rounded-3 bg-body-tertiary shadow-sm">
+                                    <h6 class="fw-bold text-info mb-3"><i class="bi bi-b-circle me-1"></i><span data-i18n="duel_loan_b">Investícia B</span></h6>
+                                    <div class="d-flex gap-2 mb-2">
+                                        <div class="w-50">
+                                            <label class="text-micro text-muted fw-bold" data-i18n="duel_amount">Vklad</label>
+                                            <input type="number" class="form-control form-control-sm" id="duelAmtB" value="5000" min="100" step="100">
+                                        </div>
+                                        <div class="w-50">
+                                            <label class="text-micro text-muted fw-bold" data-i18n="duel_rate">Úrok (%)</label>
+                                            <input type="number" class="form-control form-control-sm" id="duelRateB" value="9.0" min="1" step="0.1">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="text-micro text-muted fw-bold" data-i18n="duel_months">Mesiacov</label>
+                                        <input type="number" class="form-control form-control-sm" id="duelMonthsB" value="18" min="1" step="1">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 text-center">
+    <div class="col-12">
+        <p class="text-micro text-muted fw-bold mb-1" data-i18n="duel_total_profit">Celkový zisk</p>
+        <div class="d-flex justify-content-center gap-5">
+            <div>
+                <span class="d-block text-micro text-primary fw-bold">A</span>
+                <span class="fs-4 fw-bold text-body-emphasis" id="duelTotalA">0</span>
+            </div>
+            <div>
+                <span class="d-block text-micro text-info fw-bold">B</span>
+                <span class="fs-4 fw-bold text-body-emphasis" id="duelTotalB">0</span>
+            </div>
+        </div>
+    </div>
+</div>
+                        
+                        <div class="mt-4 alert alert-light border border-light-subtle shadow-sm text-center py-2 mb-0" id="duelWinnerAlert">
+                            Načítavam...
+                        </div>
+                        
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="i18n.js"></script>
 <script src="app.js"></script>
+<script src="tools.js"></script>
 </body>
 </html>

@@ -548,3 +548,8 @@ button.unified-box:hover {
 .donate-btn-link { font-size: 0.85rem; }
 .qr-code-wrapper { max-width: 220px; }
 #simModalIcon { color: #20c997; }
+
+/* Custom progress bar výška pre analytiku */
+.progress-hodl {
+    height: 12px;
+}

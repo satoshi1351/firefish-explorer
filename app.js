@@ -32,7 +32,7 @@ function translateStaticDOM() {
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         if (translations[currentLang][key]) {
-            el.innerText = translations[currentLang][key];
+            el.innerHTML = translations[currentLang][key];
         }
     });
     if (document.title && document.querySelector('title[data-i18n]')) {
@@ -254,6 +254,7 @@ function parseAndInitApp(csvText) {
             document.getElementById('welcomeScreen').classList.add('d-none');
             document.getElementById('mainControlPanel').classList.remove('d-none');
             document.getElementById('btnOpenSimulation').removeAttribute('disabled');
+            document.getElementById('btnOpenAnalytics').removeAttribute('disabled');
             document.getElementById('stressPlaceholder').classList.add('d-none');
             document.getElementById('stressPanel').classList.remove('d-none');
 
@@ -404,7 +405,8 @@ window.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('statusFilter').disabled = false;
             
             // --- ODOMKNUTIE TLAČIDLA PLÁNOVAČA ---
-            document.getElementById('btnOpenSimulation').removeAttribute('disabled'); 
+            document.getElementById('btnOpenSimulation').removeAttribute('disabled');
+            document.getElementById('btnOpenAnalytics').removeAttribute('disabled'); 
             
             document.getElementById('stressPlaceholder').classList.add('d-none');
             document.getElementById('stressPanel').classList.remove('d-none');
@@ -1222,6 +1224,7 @@ document.getElementById('btnSaveSimulation').addEventListener('click', async fun
 
     // --- ODOMKNUTIE TLAČIDLA PLÁNOVAČA ---
     document.getElementById('btnOpenSimulation').removeAttribute('disabled');
+    document.getElementById('btnOpenAnalytics').removeAttribute('disabled');
 
     document.getElementById('welcomeScreen').classList.add('d-none');
     document.getElementById('mainControlPanel').classList.remove('d-none');
