@@ -1,9 +1,13 @@
 // --- KONŠTANTY PRE RIZIKO ---
 const RISK_THRESHOLDS = {
-    LTV_HIGH: 70, LTV_MEDIUM: 40,
-    DIST_CRITICAL: 10, DIST_WARNING: 25,
-    CONCENTRATION_WARN: 25, CONCENTRATION_CRITICAL: 35,
-    PORTFOLIO_RISK_WARN: 20, PORTFOLIO_RISK_CRITICAL: 30
+    LTV_HIGH: 73,       // Zmenené zo 70 na 73 (Margin Call 1)
+    LTV_MEDIUM: 40,
+    DIST_CRITICAL: 9.5, // Približná vzdialenosť k likvidácii pri LTV 86%
+    DIST_WARNING: 23.2, // Približná vzdialenosť k likvidácii pri LTV 73%
+    CONCENTRATION_WARN: 25, 
+    CONCENTRATION_CRITICAL: 35,
+    PORTFOLIO_RISK_WARN: 20, 
+    PORTFOLIO_RISK_CRITICAL: 30
 };
 
 const CURRENCY_SYMBOLS = {
@@ -828,7 +832,7 @@ function updateAIInsight(m) {
     } else if (isStressed && m.capitalAtRisk > 0) {
         const stressedPrice = (state.currentBtcPrice * (1 + stressPct / 100)).toLocaleString('sk-SK', {maximumFractionDigits: 0});
         
-        // --- NOVÝ KÓD: ZÁCHRANNÉ KOLESO PRE OBOCH (INVESTOR AJ DLŽNÍK) ---
+        // --- ZÁCHRANNÉ KOLESO PRE OBOCH (INVESTOR AJ DLŽNÍK) ---
         if (state.displayData.length > 0) {
             const simPrice = state.currentBtcPrice * (1 + stressPct / 100);
             let riskyLoansDetails = [];
@@ -890,7 +894,7 @@ function updateAIInsight(m) {
                 return; // Skončíme tu
             }
         }
-        // --- KONIEC NOVÉHO KÓDU ---
+        // --- KONIEC ZÁCHRANNÉHO KOLESA ---
 
         aiMessage.innerHTML = `${t('ai_stress_warn1')} ${stressPct}% → ${stressedPrice} ${state.currencySymbol}): <strong>${m.capitalAtRisk.toLocaleString('sk-SK')} ${state.currencySymbol}</strong> ${t('ai_stress_warn2')} ${RISK_THRESHOLDS.LTV_HIGH}%). ${t('ai_stress_warn3')} ${m.riskCapitalPct.toFixed(1)}% ${isInv ? t('ai_inv') : t('ai_bor')}.`;
         insightBox.classList.add('danger');
@@ -903,6 +907,8 @@ function updateAIInsight(m) {
         insightBox.classList.add('warning');
         aiIcon.classList.add('bi-info-circle-fill', 'text-warning');
     } else {
+        
+        // --- AKTUALIZOVANÁ LOGIKA PRE MARGIN CALL 1, 2 a 3 ---
         if (m.riskiestLoan && m.riskiestLoan.ltv > 0) {
             const mc1Price = (m.riskiestLoan.due / 0.73) / m.riskiestLoan.collateralBtc;
             let dropRequired = 0;
@@ -911,11 +917,19 @@ function updateAIInsight(m) {
             }
             
             let extraInfo = '';
-            if (dropRequired > 0 && dropRequired < 100) {
-                extraInfo = `${t('ai_risk_pos')} (<strong>${m.riskiestLoan.id}</strong>) má LTV ${m.riskiestLoan.ltv.toFixed(1)}%. ${t('ai_if_drop')} <strong>${dropRequired.toFixed(1)}%</strong>, ${t('ai_mc1')}`;
-            } else if (m.riskiestLoan.ltv >= 73) {
-                extraInfo = `Pozor, ${t('ai_risk_pos').toLowerCase()} (<strong>${m.riskiestLoan.id}</strong>) ${t('ai_mc_zone')}`;
+            const ltv = m.riskiestLoan.ltv;
+
+            if (ltv >= 86) {
+                extraInfo = `<span class="text-danger">Kritický stav!</span> ${t('ai_risk_pos')} (<strong>${m.riskiestLoan.id}</strong>) prekročila <strong>Margin Call 3</strong> (LTV ${ltv.toFixed(1)}%). Likvidácia je extrémne blízko!`;
+            } else if (ltv >= 79) {
+                extraInfo = `Vážne varovanie! ${t('ai_risk_pos')} (<strong>${m.riskiestLoan.id}</strong>) je v zóne <strong>Margin Call 2</strong> (LTV ${ltv.toFixed(1)}%).`;
+            } else if (ltv >= 73) {
+                // Zachovaný tvoj prekladový kľúč z minulosti s defaultným textom ako zálohou
+                extraInfo = `Pozor, ${t('ai_risk_pos').toLowerCase()} (<strong>${m.riskiestLoan.id}</strong>) ${t('ai_mc_zone') || `je v zóne Margin Call 1 (LTV ${ltv.toFixed(1)}%).`}`;
+            } else if (dropRequired > 0 && dropRequired < 100) {
+                extraInfo = `${t('ai_risk_pos')} (<strong>${m.riskiestLoan.id}</strong>) má LTV ${ltv.toFixed(1)}%. ${t('ai_if_drop')} <strong>${dropRequired.toFixed(1)}%</strong>, ${t('ai_mc1')}`;
             }
+            
             aiMessage.innerHTML = `${t('ai_ok')} ${extraInfo}`;
         } else {
             aiMessage.innerHTML = `${t('ai_ok')} (LTV ${m.avgLtv.toFixed(1)}%). ${t('ai_no_liq')}`;
@@ -1094,19 +1108,23 @@ function renderCharts() {
                 annotation: {
                     clip: false, 
                     annotations: {
-                        lineMC1: {
-                            type: 'line', yMin: 23.16, yMax: 23.16, borderColor: '#ffc107', borderWidth: 2, borderDash: [6, 4],
-                            label: { display: true, content: 'Margin Call 1 (73%)', position: 'end', backgroundColor: '#ffc107', color: '#000', font: { size: 11, weight: 'bold', family: "system-ui, -apple-system, sans-serif" }, padding: { top: 4, bottom: 4, left: 8, right: 8 }, borderRadius: 4, xAdjust: 105 }
-                        },
-                        lineMC2: {
-                            type: 'line', yMin: 11.58, yMax: 11.58, borderColor: '#fd7e14', borderWidth: 2, borderDash: [6, 4],
-                            label: { display: true, content: 'Margin Call 2 (84%)', position: 'end', backgroundColor: '#fd7e14', color: '#000', font: { size: 11, weight: 'bold', family: "system-ui, -apple-system, sans-serif" }, padding: { top: 4, bottom: 4, left: 8, right: 8 }, borderRadius: 4, xAdjust: 105 }
-                        },
-                        lineLiq: {
-                            type: 'line', yMin: 0, yMax: 0, borderColor: '#dc3545', borderWidth: 2, borderDash: [6, 4],
-                            label: { display: true, content: 'Liquidation (95%)', position: 'end', backgroundColor: '#dc3545', color: '#000', font: { size: 11, weight: 'bold', family: "system-ui, -apple-system, sans-serif" }, padding: { top: 4, bottom: 4, left: 8, right: 8 }, borderRadius: 4, xAdjust: 105 }
-                        }
-                    }
+    lineMC1: {
+        type: 'line', yMin: 23.16, yMax: 23.16, borderColor: '#ffc107', borderWidth: 2, borderDash: [6, 4],
+        label: { display: true, content: 'Margin Call 1 (73%)', position: 'end', backgroundColor: '#ffc107', color: '#000', xAdjust: 105 }
+    },
+    lineMC2: {
+        type: 'line', yMin: 16.84, yMax: 16.84, borderColor: '#fd7e14', borderWidth: 2, borderDash: [6, 4],
+        label: { display: true, content: 'Margin Call 2 (79%)', position: 'end', backgroundColor: '#fd7e14', color: '#000', xAdjust: 105 }
+    },
+    lineMC3: {
+        type: 'line', yMin: 9.47, yMax: 9.47, borderColor: '#dc3545', borderWidth: 2, borderDash: [6, 4],
+        label: { display: true, content: 'Margin Call 3 (86%)', position: 'end', backgroundColor: '#dc3545', color: '#000', xAdjust: 105 }
+    },
+    lineLiq: {
+        type: 'line', yMin: 0, yMax: 0, borderColor: '#000', borderWidth: 2,
+        label: { display: true, content: 'Likvidácia (95%)', position: 'end', backgroundColor: '#000', color: '#fff', xAdjust: 105 }
+    }
+}
                 }
             },
             scales: { x: commonScales.x, y: { suggestedMax: 100, ...commonScales.y } }
