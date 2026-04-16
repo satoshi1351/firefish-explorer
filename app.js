@@ -1122,7 +1122,7 @@ function renderCharts() {
     },
     lineLiq: {
         type: 'line', yMin: 0, yMax: 0, borderColor: '#000', borderWidth: 2,
-        label: { display: true, content: 'Likvidácia (95%)', position: 'end', backgroundColor: '#000', color: '#fff', xAdjust: 105 }
+        label: { display: true, content: 'Liquidation (95%)', position: 'end', backgroundColor: '#000', color: '#fff', xAdjust: 105 }
     }
 }
                 }
