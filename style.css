@@ -553,3 +553,37 @@ button.unified-box:hover {
 .progress-hodl {
     height: 12px;
 }
+
+/* --- TOOLBAR ROZMERY (Presunuté z HTML inline štýlov) --- */
+.csv-file-input {
+    max-width: 220px;
+}
+
+.toolbar-separator {
+    height: 24px;
+}
+
+.stress-slider {
+    max-width: 300px;
+}
+
+/* --- STRESS TEST POSUVNÍK (Nekompromisne šedá bodka) --- */
+/* Pre Chrome, Safari, Edge */
+.stress-slider::-webkit-slider-thumb {
+    background-color: #6c757d !important; /* Šedá farba */
+    border: 0 !important;
+}
+
+/* Pre Firefox */
+.stress-slider::-moz-range-thumb {
+    background-color: #6c757d !important; /* Šedá farba */
+    border: 0 !important;
+}
+
+/* Aby nesvietil modrý tieň, keď naň používateľ klikne (focus stav) */
+.stress-slider:focus::-webkit-slider-thumb {
+    box-shadow: 0 0 0 1px #fff, 0 0 0 0.25rem rgba(108, 117, 125, 0.25) !important;
+}
+.stress-slider:focus::-moz-range-thumb {
+    box-shadow: 0 0 0 1px #fff, 0 0 0 0.25rem rgba(108, 117, 125, 0.25) !important;
+}

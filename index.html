@@ -59,54 +59,64 @@
     </div>
 
     <div class="control-panel-pro d-none" id="mainControlPanel">
-        <div class="row g-3">
-            <div class="col-12 pb-3 border-bottom border-light-subtle">
-                <label class="text-muted text-micro fw-bold mb-2 d-block" data-i18n="lbl_source_view">ZDROJ DÁT & POHĽAD</label>
-                <div class="d-flex flex-wrap flex-sm-nowrap align-items-center gap-2">
+    <div class="row g-3">
+        <div class="col-12 pb-3 border-bottom border-light-subtle">
+            <label class="text-muted text-micro fw-bold mb-2 d-block" data-i18n="lbl_source_view">ZDROJ DÁT & POHĽAD</label>
+            
+            <div class="d-flex flex-wrap align-items-center gap-3">
+                
+                <div class="d-flex align-items-center gap-2">
                     <input type="file" id="csvFileInput" accept=".csv" class="form-control form-control-sm shadow-sm csv-file-input" aria-label="Nahrať CSV">
-
+                    
                     <select id="statusFilter" class="form-select form-select-sm shadow-sm w-auto" aria-label="Filter statusu" title="Filtrovať pôžičky" disabled>
                         <option value="ALL" data-i18n="filter_all">Všetky</option>
                         <option value="ACTIVE" data-i18n="filter_active" selected>Aktívne</option>
                         <option value="CLOSED" data-i18n="filter_closed">Ukončené</option>
                     </select>
-
-                    <div class="btn-group btn-group-sm shadow-sm" role="group" id="roleToggleGroup">
-    <input type="radio" class="btn-check" name="roleToggle" id="roleInvestor" value="investor" autocomplete="off" checked disabled>
-    <label class="btn btn-outline-secondary fw-medium" for="roleInvestor" title="Zobraziť moje investície">
-        <i class="bi bi-bar-chart-fill me-1"></i> <span data-i18n="role_investor">Investície</span>
-    </label>
-
-    <input type="radio" class="btn-check" name="roleToggle" id="roleBorrower" value="borrower" autocomplete="off" disabled>
-    <label class="btn btn-outline-secondary fw-medium" for="roleBorrower" title="Zobraziť moje dlhy">
-        <i class="bi bi-currency-exchange me-1"></i> <span data-i18n="role_borrower">Pôžičky</span>
-    </label>
-</div>
-
-<button class="btn btn-sm btn-outline-primary shadow-sm text-nowrap" id="btnOpenSimulation" data-bs-toggle="modal" data-bs-target="#simulationModal" disabled>
-    <i class="bi bi-plus-circle me-1"></i> <span data-i18n="btn_plan">Plánovať</span>
-</button>
-<button class="btn btn-sm btn-outline-warning shadow-sm text-nowrap" id="btnOpenAnalytics" data-bs-toggle="modal" data-bs-target="#analyticsModal" disabled>
-    <i class="bi bi-tools me-1"></i> <span data-i18n="btn_analytics">Nástroje</span>
-</button>
                 </div>
+
+                <div class="vr d-none d-md-block opacity-25 toolbar-separator"></div>
+
+                <div class="btn-group btn-group-sm shadow-sm" role="group" id="roleToggleGroup">
+                    <input type="radio" class="btn-check" name="roleToggle" id="roleInvestor" value="investor" autocomplete="off" checked disabled>
+                    <label class="btn btn-outline-secondary fw-medium" for="roleInvestor">
+                        <i class="bi bi-bar-chart-fill me-1"></i> <span data-i18n="role_investor">Investície</span>
+                    </label>
+
+                    <input type="radio" class="btn-check" name="roleToggle" id="roleBorrower" value="borrower" autocomplete="off" disabled>
+                    <label class="btn btn-outline-secondary fw-medium" for="roleBorrower">
+                        <i class="bi bi-currency-exchange me-1"></i> <span data-i18n="role_borrower">Pôžičky</span>
+                    </label>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-secondary shadow-sm text-nowrap" id="btnOpenSimulation" data-bs-toggle="modal" data-bs-target="#simulationModal" disabled>
+                        <i class="bi bi-plus-circle me-1"></i> <span data-i18n="btn_plan">Plánovať</span>
+                    </button>
+
+                    <button class="btn btn-sm btn-outline-secondary shadow-sm text-nowrap" id="btnOpenAnalytics" data-bs-toggle="modal" data-bs-target="#analyticsModal" disabled>
+                        <i class="bi bi-tools me-1"></i> <span data-i18n="btn_analytics">Nástroje</span>
+                    </button>
+                </div>
+
             </div>
+        </div>
 
-            <div class="col-12 pt-1">
-                <div id="stressPlaceholder" class="text-muted text-small opacity-50 py-1">
-                    <i class="bi bi-info-circle"></i> Stress test sa odomkne po nahratí dát.
-                </div>
-                <div id="stressPanel" class="d-none">
-                    <label class="text-muted text-micro fw-bold mb-2 d-block" data-i18n="lbl_stress_test">SIMULÁCIA TRHU (STRESS TEST)</label>
-                    <div class="d-flex flex-wrap align-items-center gap-3">
-                        <input type="range" id="stressSlider" min="-70" max="0" value="0" step="5" class="form-range stress-slider" aria-label="Nastavenie úrovne stress testu" title="Posuvník pre stress test">
-                        <span id="stressLabel" class="badge bg-secondary shadow-sm" data-i18n="badge_no_stress">Bez stresu</span>
-                        <small class="text-muted mt-2 mt-sm-0" id="stressBtcPrice"></small>
-                    </div>
+        <div class="col-12 pt-1">
+            <div id="stressPlaceholder" class="text-muted text-small opacity-50 py-1">
+                <i class="bi bi-info-circle"></i> Stress test sa odomkne po nahratí dát.
+            </div>
+            <div id="stressPanel" class="d-none">
+                <label class="text-muted text-micro fw-bold mb-2 d-block" data-i18n="lbl_stress_test">SIMULÁCIA TRHU (STRESS TEST)</label>
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <input type="range" id="stressSlider" min="-70" max="0" value="0" step="5" class="form-range stress-slider" aria-label="Stress test">
+                    <span id="stressLabel" class="badge bg-secondary shadow-sm" data-i18n="badge_no_stress">Bez stresu</span>
+                    <small class="text-muted" id="stressBtcPrice"></small>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
     <div id="aiInsightBox" class="alert ai-insight-card d-none mb-4 py-3 px-4" role="alert">
         <div class="d-flex align-items-start align-items-sm-center flex-column flex-sm-row">
