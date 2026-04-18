@@ -259,6 +259,7 @@ function parseAndInitApp(csvText) {
             document.getElementById('mainControlPanel').classList.remove('d-none');
             document.getElementById('btnOpenSimulation').removeAttribute('disabled');
             document.getElementById('btnOpenAnalytics').removeAttribute('disabled');
+            document.getElementById('btnOpenCycle').removeAttribute('disabled');
             document.getElementById('stressPlaceholder').classList.add('d-none');
             document.getElementById('stressPanel').classList.remove('d-none');
 
@@ -410,7 +411,8 @@ window.addEventListener('DOMContentLoaded', async () => {
             
             // --- ODOMKNUTIE TLAČIDLA PLÁNOVAČA ---
             document.getElementById('btnOpenSimulation').removeAttribute('disabled');
-            document.getElementById('btnOpenAnalytics').removeAttribute('disabled'); 
+            document.getElementById('btnOpenAnalytics').removeAttribute('disabled');
+            document.getElementById('btnOpenCycle').removeAttribute('disabled'); 
             
             document.getElementById('stressPlaceholder').classList.add('d-none');
             document.getElementById('stressPanel').classList.remove('d-none');
@@ -1243,6 +1245,7 @@ document.getElementById('btnSaveSimulation').addEventListener('click', async fun
     // --- ODOMKNUTIE TLAČIDLA PLÁNOVAČA ---
     document.getElementById('btnOpenSimulation').removeAttribute('disabled');
     document.getElementById('btnOpenAnalytics').removeAttribute('disabled');
+    document.getElementById('btnOpenCycle').removeAttribute('disabled');
 
     document.getElementById('welcomeScreen').classList.add('d-none');
     document.getElementById('mainControlPanel').classList.remove('d-none');

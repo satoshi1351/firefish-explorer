@@ -90,14 +90,18 @@
                 </div>
 
                 <div class="d-flex gap-2">
-                    <button class="btn btn-sm btn-outline-secondary shadow-sm text-nowrap" id="btnOpenSimulation" data-bs-toggle="modal" data-bs-target="#simulationModal" disabled>
-                        <i class="bi bi-plus-circle me-1"></i> <span data-i18n="btn_plan">Plánovať</span>
-                    </button>
+    <button class="btn btn-sm btn-outline-secondary shadow-sm text-nowrap" id="btnOpenSimulation" data-bs-toggle="modal" data-bs-target="#simulationModal" disabled>
+        <i class="bi bi-plus-circle me-1"></i> <span data-i18n="btn_plan">Plánovať</span>
+    </button>
 
-                    <button class="btn btn-sm btn-outline-secondary shadow-sm text-nowrap" id="btnOpenAnalytics" data-bs-toggle="modal" data-bs-target="#analyticsModal" disabled>
-                        <i class="bi bi-tools me-1"></i> <span data-i18n="btn_analytics">Nástroje</span>
-                    </button>
-                </div>
+    <button class="btn btn-sm btn-outline-secondary shadow-sm text-nowrap" id="btnOpenAnalytics" data-bs-toggle="modal" data-bs-target="#analyticsModal" disabled>
+        <i class="bi bi-tools me-1"></i> <span data-i18n="btn_analytics">Nástroje</span>
+    </button>
+    
+    <button class="btn btn-sm btn-outline-secondary shadow-sm text-nowrap" id="btnOpenCycle" data-bs-toggle="modal" data-bs-target="#cycleModal" disabled>
+        <i class="bi bi-clock-history me-1"></i> <span data-i18n="btn_cycle">Cyklus</span>
+    </button>
+</div>
 
             </div>
         </div>
@@ -647,8 +651,35 @@
     </div>
 </div>
 
+<div class="modal fade" id="cycleModal" tabindex="-1" aria-labelledby="cycleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-body-tertiary border-bottom border-light-subtle">
+                <h5 class="modal-title fw-bold text-body-emphasis" id="cycleModalLabel">
+                    <i class="bi bi-clock-history text-secondary me-2"></i> <span data-i18n="guide_modal_title">Cyklus pôžičky</span>
+                </h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Zavrieť"></button>
+            </div>
+            <div class="modal-body bg-body-tertiary p-0">
+                <div class="row g-0 h-100">
+                    <div class="col-md-4 col-lg-3 bg-body border-end border-light-subtle p-3 cycle-timeline-panel">
+                        <h6 class="text-muted text-micro fw-bold mb-3 px-2" data-i18n="guide_phases_title">FÁZY PODĽA ZMLUVY</h6>
+                        <div id="guideTimelineMenu">
+                            </div>
+                    </div>
+                    <div class="col-md-8 col-lg-9 p-4 p-md-5">
+                        <div id="guideStepDetail">
+                            </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="i18n.js"></script>
 <script src="app.js"></script>
+<script src="cycle.js"></script>
 <script src="tools.js"></script>
 </body>
 </html>

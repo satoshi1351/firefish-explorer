@@ -2,7 +2,7 @@
 
 A powerful, privacy-first, client-side dashboard for analyzing your investments and loans on the [Firefish.io](https://firefish.io?ref=satoshi1351) platform. 
 
-![Firefish Explorer Dashboard](screenshot1.jpeg)
+![Firefish Explorer Dashboard](screenshot.jpeg)
 
 ## Why Firefish Explorer?
 The official Firefish platform is great, but as your portfolio grows, you need advanced analytics, risk management, and market simulations. Firefish Explorer takes your raw CSV data and turns it into a professional financial dashboard—**all without your data ever leaving your computer.**
@@ -12,10 +12,11 @@ The official Firefish platform is great, but as your portfolio grows, you need a
 - **100% Secure & Offline:** No backend, no databases, no tracking. The app runs entirely in your local browser. Your financial data is parsed and analyzed locally.
 - **Dual-Mode (Lender & Borrower):** Automatically detects if you are lending money (Assets) or borrowing money (Liabilities) and toggles the entire UI, math, and terminology accordingly.
 - **Market Simulation (Stress Test):** A real-time slider to simulate Bitcoin price drops (up to -70%). Instantly see which loans hit Margin Call 1 or liquidation limits.
-- **Smart AI Analyst:** Contextual alerts that warn you about high concentration risks, upcoming liquidations, and required safety margins.
+- **Smart Analyst:** Contextual alerts that warn you about high concentration risks, upcoming liquidations, and required safety margins.
 - **Advanced Visualizations:** Interactive charts for Cashflow, Liquidation Distances, Interest Rate distributions, and TOP Counterparties.
 - **Built-in Simulator:** Plan new investments or loans and see how they impact your overall portfolio risk before executing them.
 - **Firefish EXPLORER Tools** A dedicated module featuring a Market Compass, Opportunity Cost Calculator (HODL vs. Invest), and an A/B Investment Duel tool to make data-driven decisions.
+- **Loan Cycle (LaSA):** A dedicated tool that tracks your loans through the 7 legal stages defined in the Firefish LaSA contract. It automatically maps your CSV data to phases like Disbursement, Monitoring, and Maturity, providing clear insights into the legal status of your assets.
 - **Multi-language:** Auto-detects your browser language.
 - **Dark/Light Mode:** Because staring at numbers should be easy on the eyes.
 
