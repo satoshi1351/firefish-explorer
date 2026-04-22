@@ -209,7 +209,8 @@ const translations = {
         "guide_phases_title": "CONTRACT PHASES",
         "guide_active_loans": "Contracts currently in this phase:",
         "guide_no_loans": "There are currently no contracts in this phase.",
-        "guide_maturity": "Maturity:"
+        "guide_maturity": "Maturity:",
+        "guide_disclaimer": "Phase dates are based on platform system records. For accounting and tax purposes, always use actual dates from your bank statements."
     },
 
     // ------------------- SLOVENČINA -------------------
@@ -422,7 +423,8 @@ const translations = {
         "guide_phases_title": "FÁZY PODĽA ZMLUVY",
         "guide_active_loans": "Zmluvy aktuálne v tejto fáze:",
         "guide_no_loans": "V tejto fáze sa aktuálne nenachádzajú žiadne zmluvy.",
-        "guide_maturity": "Splatnosť:"
+        "guide_maturity": "Splatnosť:",
+        "guide_disclaimer": "Dátumy fáz vychádzajú zo systémových záznamov platformy. Pre účtovné a daňové účely používajte vždy reálne dátumy z vašich bankových výpisov."
     },
 
     // ------------------- ČEŠTINA -------------------
@@ -634,7 +636,8 @@ const translations = {
         "guide_phases_title": "FÁZE PODLE SMLOUVY",
         "guide_active_loans": "Smlouvy aktuálně v této fázi:",
         "guide_no_loans": "V této fázi se aktuálně nenacházejí žádné smlouvy.",
-        "guide_maturity": "Splatnost:"
+        "guide_maturity": "Splatnost:",
+        "guide_disclaimer": "Data fází vycházejí ze systémových záznamů platformy. Pro účetní a daňové účely používejte vždy reálná data z vašich bankovních výpisů."
     },
 
     // ------------------- GERMAN (DE) -------------------
@@ -836,7 +839,8 @@ const translations = {
         "guide_phases_title": "VERTRAGSPHASEN",
         "guide_active_loans": "Verträge aktuell in dieser Phase:",
         "guide_no_loans": "Derzeit befinden sich keine Verträge in dieser Phase.",
-        "guide_maturity": "Fälligkeit:"
+        "guide_maturity": "Fälligkeit:",
+        "guide_disclaimer": "Die Datumsangaben der Phasen basieren auf Systemaufzeichnungen der Plattform. Verwenden Sie für Buchhaltungs- und Steuerzwecke immer die tatsächlichen Daten Ihrer Bankbelege."
     },
 
     // ------------------- POLISH (PL) -------------------
@@ -1039,7 +1043,8 @@ const translations = {
         "guide_phases_title": "FAZY WEDŁUG UMOWY",
         "guide_active_loans": "Umowy obecnie w tej fazie:",
         "guide_no_loans": "Obecnie nie ma żadnych umów w tej fazie.",
-        "guide_maturity": "Zapadalność:"
+        "guide_maturity": "Zapadalność:",
+        "guide_disclaimer": "Daty faz opierają się na zapisach systemowych platformy. Do celów księgowych i podatkowych należy zawsze używać faktycznych dat z wyciągów bankowych."
     },
 
     // ------------------- HUNGARIAN (HU) -------------------
@@ -1242,7 +1247,8 @@ const translations = {
         "guide_phases_title": "SZERZŐDÉSI FÁZISOK",
         "guide_active_loans": "Szerződések jelenleg ebben a fázisban:",
         "guide_no_loans": "Jelenleg nincsenek szerződések ebben a fázisban.",
-        "guide_maturity": "Lejárat:"
+        "guide_maturity": "Lejárat:",
+        "guide_disclaimer": "A fázisok dátumai a platform rendszernaplóin alapulnak. Számviteli és adózási célokra mindig a bankszámlakivonatokon szereplő valós dátumokat használja."
     },
 
     // ------------------- SPANISH (ES) -------------------
@@ -1445,7 +1451,8 @@ const translations = {
         "guide_phases_title": "FASES DEL CONTRATO",
         "guide_active_loans": "Contratos actualmente en esta fase:",
         "guide_no_loans": "Actualmente no hay contratos en esta fase.",
-        "guide_maturity": "Vencimiento:"
+        "guide_maturity": "Vencimiento:",
+        "guide_disclaimer": "Las fechas de las fases se basan en los registros del sistema de la plataforma. Para fines contables y fiscales, utilice siempre las fechas reales de sus extractos bancarios."
     },
 
     // ------------------- ITALIAN (IT) -------------------
@@ -1648,7 +1655,8 @@ const translations = {
         "guide_phases_title": "FASI DEL CONTRATTO",
         "guide_active_loans": "Contratti attualmente in questa fase:",
         "guide_no_loans": "Al momento non ci sono contratti in questa fase.",
-        "guide_maturity": "Scadenza:"
+        "guide_maturity": "Scadenza:",
+        "guide_disclaimer": "Le date delle fasi si basano sui record di sistema della piattaforma. Per scopi contabili e fiscali, utilizzare sempre le date effettive dei propri estratti conto bancari."
     },
 
     // ------------------- TRADITIONAL CHINESE (ZH_TW) -------------------
@@ -1851,7 +1859,8 @@ const translations = {
         "guide_phases_title": "合約階段",
         "guide_active_loans": "目前在此階段的合約：",
         "guide_no_loans": "目前沒有合約在此階段。",
-        "guide_maturity": "到期日："
+        "guide_maturity": "到期日：",
+        "guide_disclaimer": "階段日期基於平台系統記錄。若用於會計和稅務目的，請始終使用銀行對帳單上的實際日期。"
     },
 
     // ------------------- NORWEGIAN (NO) -------------------
@@ -2054,7 +2063,8 @@ const translations = {
         "guide_phases_title": "KONTRAKTSFASER",
         "guide_active_loans": "Kontrakter for øyeblikket i denne fasen:",
         "guide_no_loans": "Det er for øyeblikket ingen kontrakter i denne fasen.",
-        "guide_maturity": "Forfall:"
+        "guide_maturity": "Forfall:",
+        "guide_disclaimer": "Fasedatoene er basert på plattformens systemlogger. For regnskaps- og skatteformål, bruk alltid de faktiske datoene fra bankutskriftene dine."
     },
 
     // ------------------- FRENCH (FR) -------------------
@@ -2257,6 +2267,7 @@ const translations = {
         "guide_phases_title": "PHASES DU CONTRAT",
         "guide_active_loans": "Contrats actuellement dans cette phase :",
         "guide_no_loans": "Il n'y a actuellement aucun contrat dans cette phase.",
-        "guide_maturity": "Échéance :"
+        "guide_maturity": "Échéance :",
+        "guide_disclaimer": "Les dates des phases sont basées sur les enregistrements système de la plateforme. À des fins comptables et fiscales, utilisez toujours les dates réelles de vos relevés bancaires."
     }
 };

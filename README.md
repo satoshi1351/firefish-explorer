@@ -34,6 +34,11 @@ The latest addition to Firefish Explorer is a dedicated analytics module designe
   - *What it is:* An A/B testing tool to compare two different loan offers.
   - *How it works:* By entering the principal, APY, and duration of two separate offers, the tool calculates the **Total Expected Profit** and evaluates the overall investment efficiency. It acts as a smart judge, revealing which loan makes your money work faster and smarter (based on APY and time constraints), rather than just blindly looking at the highest absolute return.
 
+## Legal & Accuracy Note
+Please note that Firefish EXPLORER is an **analytical and educational tool**. 
+- **Dates:** Loan lifecycle phases and dates are based on platform system records. Actual bank transfer dates (important for tax/accounting) may vary by 1-2 business days.
+- **Calculations:** While we strive for 100% accuracy based on the LaSA contract, always verify critical financial decisions with official platform data and your bank statements.
+
 ## How to Use (Quick Start)
 
 You don't need to install anything or set up a server. Choose the method that suits you best:

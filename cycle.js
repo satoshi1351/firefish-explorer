@@ -167,13 +167,18 @@ window.switchGuideStage = function(stageId) {
         }
 
         setTimeout(() => {
-            contentContainer.innerHTML = `<div class="w-100 bg-body p-4 rounded shadow-sm border border-light-subtle">
-                                            ${stageData.content}
-                                            ${loansHTML}
-                                          </div>`;
-            contentContainer.style.transition = 'opacity 0.2s ease-in-out';
-            contentContainer.style.opacity = '1';
-        }, 150);
+    contentContainer.innerHTML = `
+        <div class="w-100 bg-body p-4 rounded shadow-sm border border-light-subtle">
+            ${stageData.content}
+            ${loansHTML}
+            
+            <div class="alert alert-secondary border-0 mt-4 mb-0 text-center small opacity-75">
+                <i class="bi bi-info-circle me-1"></i> ${t('guide_disclaimer')}
+            </div>
+        </div>`;
+    contentContainer.style.transition = 'opacity 0.2s ease-in-out';
+    contentContainer.style.opacity = '1';
+}, 150);
     }
 }
 
