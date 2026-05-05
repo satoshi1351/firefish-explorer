@@ -130,7 +130,7 @@ async function fetchBtcPrice() {
 function recalculateBaseData() {
     state.rawData.forEach(d => {
         const collateralValue = d.collateralBtc * state.currentBtcPrice;
-        d.ltv = collateralValue > 0 ? (d.due / collateralValue) * 100 : 0;
+        d.ltv = collateralValue > 0 ? (d.invested / collateralValue) * 100 : 0;
         
         if (d.isActive && d.liquidationPrice > 0 && state.currentBtcPrice > 0) {
             d.distancePct = ((state.currentBtcPrice - d.liquidationPrice) / state.currentBtcPrice) * 100;
@@ -159,7 +159,7 @@ function refreshDashboard() {
             if (stressedBtcPrice <= 0) return { ...d, ltv: 0, distancePct: 0 };
             
             const stressedCollateralValue = d.collateralBtc * stressedBtcPrice;
-            const stressedLtv = stressedCollateralValue > 0 ? (d.due / stressedCollateralValue) * 100 : 0;
+            const stressedLtv = stressedCollateralValue > 0 ? (d.invested / stressedCollateralValue) * 100 : 0;
             const stressedDistance = d.liquidationPrice > 0
                 ? ((stressedBtcPrice - d.liquidationPrice) / stressedBtcPrice) * 100
                 : 0;
@@ -497,7 +497,7 @@ function parseRawData(data) {
         const role = (investorId === state.myId) ? 'investor' : 'borrower';
 
         const collateralValue = collateralBtc * state.currentBtcPrice;
-        const ltv = collateralValue > 0 ? (due / collateralValue) * 100 : 0;
+        const ltv = collateralValue > 0 ? (invested / collateralValue) * 100 : 0;
         const profit = due - invested;
         const isClosed = status === 'CLOSED';
         const isActive = status === 'ACTIVE';
@@ -842,7 +842,7 @@ function updateAIInsight(m) {
 
             state.displayData.forEach(item => {
                 if (!item.isActive || item.collateralBtc <= 0) return;
-                const itemLTV = (item.due / (item.collateralBtc * simPrice)) * 100;
+                const itemLTV = (item.invested / (item.collateralBtc * simPrice)) * 100;
 
                 if (itemLTV >= 95) { 
                     // ZLIKVIDOVANÉ
@@ -850,7 +850,7 @@ function updateAIInsight(m) {
                 } else if (itemLTV > RISK_THRESHOLDS.LTV_HIGH) { 
                     // OHROZENÉ
                     const targetSafeLTV = 70; 
-                    const neededCollateral = (item.due * 100) / (targetSafeLTV * simPrice);
+                    const neededCollateral = (item.invested * 100) / (targetSafeLTV * simPrice);
                     const toAddForThisLoan = Math.max(0, neededCollateral - item.collateralBtc);
                     
                     // Text sa mení podľa toho, či to pozerá investor alebo dlžník
@@ -912,7 +912,7 @@ function updateAIInsight(m) {
         
         // --- AKTUALIZOVANÁ LOGIKA PRE MARGIN CALL 1, 2 a 3 ---
         if (m.riskiestLoan && m.riskiestLoan.ltv > 0) {
-            const mc1Price = (m.riskiestLoan.due / 0.73) / m.riskiestLoan.collateralBtc;
+            const mc1Price = (m.riskiestLoan.invested / 0.73) / m.riskiestLoan.collateralBtc;
             let dropRequired = 0;
             if (state.currentBtcPrice > mc1Price) {
                 dropRequired = ((state.currentBtcPrice - mc1Price) / state.currentBtcPrice) * 100;
@@ -1214,8 +1214,8 @@ document.getElementById('btnSaveSimulation').addEventListener('click', async fun
     const invId = role === 'investor' ? (state.myId || 'JA') : t('sim_lender');
     const borId = role === 'borrower' ? (state.myId || 'JA') : t('sim_borrower');
 
-    const calculatedCollateral = (state.currentBtcPrice > 0) ? ((due / 0.50) / state.currentBtcPrice) : 0;
-    const calculatedLiqPrice = (calculatedCollateral > 0) ? (due / (calculatedCollateral * 0.95)) : 0;
+    const calculatedCollateral = (state.currentBtcPrice > 0) ? ((amount / 0.50) / state.currentBtcPrice) : 0;
+const calculatedLiqPrice = (calculatedCollateral > 0) ? (amount / (calculatedCollateral * 0.95)) : 0;
 
     const simLoan = {
         id: 'SIM-' + Math.floor(Math.random() * 10000), 
