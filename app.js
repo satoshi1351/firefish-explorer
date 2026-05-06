@@ -134,8 +134,15 @@ function recalculateBaseData() {
         
         if (d.isActive && d.liquidationPrice > 0 && state.currentBtcPrice > 0) {
             d.distancePct = ((state.currentBtcPrice - d.liquidationPrice) / state.currentBtcPrice) * 100;
+            
+            // --- NOVÝ VÝPOČET CHI ---
+            const liqPrice = d.due / (d.collateralBtc * 0.95);
+            const initPrice = d.due / (d.collateralBtc * 0.50);
+            let chi = (state.currentBtcPrice - liqPrice) / (initPrice - liqPrice);
+            d.chiPct = Math.max(0, Math.min(1, chi)) * 100;
         } else {
             d.distancePct = 0;
+            d.chiPct = 0;
         }
     });
 }
@@ -163,7 +170,14 @@ function refreshDashboard() {
             const stressedDistance = d.liquidationPrice > 0
                 ? ((stressedBtcPrice - d.liquidationPrice) / stressedBtcPrice) * 100
                 : 0;
-            return { ...d, ltv: stressedLtv, distancePct: stressedDistance };
+                
+            // --- VÝPOČET CHI PRE STRESS TEST ---
+            const liqPrice = d.due / (d.collateralBtc * 0.95);
+            const initPrice = d.due / (d.collateralBtc * 0.50);
+            let stressedChi = (stressedBtcPrice - liqPrice) / (initPrice - liqPrice);
+            const finalStressedChi = Math.max(0, Math.min(1, stressedChi)) * 100;
+
+            return { ...d, ltv: stressedLtv, distancePct: stressedDistance, chiPct: finalStressedChi };
         });
     }
 
@@ -975,6 +989,18 @@ function renderTable() {
         let distText = (d.isActive && d.liquidationPrice > 0)
             ? `<div class="mt-1 text-micro">${t('tbl_gap')} <span class="fw-bold ${distColor}">${d.distancePct.toFixed(1)}%</span></div>`
             : '';
+            
+        // --- VYKRESLENIE CHI ---
+        let chiColor = 'text-success';
+        if (d.chiPct < 50) chiColor = 'text-warning';
+        if (d.chiPct < 20) chiColor = 'text-danger';
+        
+        let chiText = (d.isActive && d.collateralBtc > 0 && typeof d.chiPct !== 'undefined')
+            ? `<div class="text-micro mt-1" title="Collateral Health Index">
+                 <i class="bi bi-shield-check ${chiColor}"></i> 
+                 <span class="fw-bold">CHI: ${d.chiPct.toFixed(0)}%</span>
+               </div>`
+            : '';
 
         let miniLtvBar = '';
         if (d.isActive && d.ltv > 0) {
@@ -1019,6 +1045,7 @@ function renderTable() {
                 <div class="mb-1"><span class="badge ${ltvClass}">${ltvLabel} (${d.ltv.toFixed(1)}%)</span></div>
                 ${miniLtvBar}
                 ${distText}
+                ${chiText}
             </td>
             <td data-label="Priebeh">
                 <div class="d-flex flex-column" style="min-width: 180px; width: 100%;">
