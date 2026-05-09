@@ -90,18 +90,18 @@
                 </div>
 
                 <div class="d-flex gap-2">
-    <button class="btn btn-sm btn-outline-secondary shadow-sm text-nowrap" id="btnOpenSimulation" data-bs-toggle="modal" data-bs-target="#simulationModal" disabled>
-        <i class="bi bi-plus-circle me-1"></i> <span data-i18n="btn_plan">Plánovať</span>
-    </button>
+                    <button class="btn btn-sm btn-outline-secondary shadow-sm text-nowrap" id="btnOpenSimulation" data-bs-toggle="modal" data-bs-target="#simulationModal" disabled>
+                        <i class="bi bi-plus-circle me-1"></i> <span data-i18n="btn_plan">Plánovať</span>
+                    </button>
 
-    <button class="btn btn-sm btn-outline-secondary shadow-sm text-nowrap" id="btnOpenAnalytics" data-bs-toggle="modal" data-bs-target="#analyticsModal" disabled>
-        <i class="bi bi-tools me-1"></i> <span data-i18n="btn_analytics">Nástroje</span>
-    </button>
-    
-    <button class="btn btn-sm btn-outline-secondary shadow-sm text-nowrap" id="btnOpenCycle" data-bs-toggle="modal" data-bs-target="#cycleModal" disabled>
-        <i class="bi bi-clock-history me-1"></i> <span data-i18n="btn_cycle">Cyklus</span>
-    </button>
-</div>
+                    <button class="btn btn-sm btn-outline-secondary shadow-sm text-nowrap" id="btnOpenAnalytics" data-bs-toggle="modal" data-bs-target="#analyticsModal" disabled>
+                        <i class="bi bi-tools me-1"></i> <span data-i18n="btn_analytics">Nástroje</span>
+                    </button>
+                    
+                    <button class="btn btn-sm btn-outline-secondary shadow-sm text-nowrap" id="btnOpenCycle" data-bs-toggle="modal" data-bs-target="#cycleModal" disabled>
+                        <i class="bi bi-clock-history me-1"></i> <span data-i18n="btn_cycle">Cyklus</span>
+                    </button>
+                </div>
 
             </div>
         </div>
@@ -180,7 +180,7 @@
                             <div class="text-muted opacity-50">Žiadne aktívne zmluvy.</div>
                         </div>
                     </div>
-                    </div>
+                </div>
             </div>
 
             <div class="col-md-3">
@@ -323,6 +323,8 @@
     </div>
 </div>
 
+<!-- ==================== MODÁLY ==================== -->
+
 <div class="modal fade" id="simulationModal" tabindex="-1" aria-labelledby="simulationModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -334,48 +336,48 @@
             </div>
             <div class="modal-body">
                 <form id="simulationForm" onsubmit="event.preventDefault();">
-    <div class="mb-3">
-    <label class="form-label text-muted text-micro fw-bold" data-i18n="sim_type_label">TYP SIMULÁCIE</label>
-    <div class="d-flex gap-4">
-        <div class="form-check">
-            <input class="form-check-input" type="radio" name="simRole" id="simRoleInv" value="investor" checked>
-            <label class="form-check-label fw-medium text-dark" for="simRoleInv" data-i18n="sim_type_inv">Investícia</label>
-        </div>
-        <div class="form-check">
-            <input class="form-check-input" type="radio" name="simRole" id="simRoleBor" value="borrower">
-            <label class="form-check-label fw-medium text-dark" for="simRoleBor" data-i18n="sim_type_bor">Pôžička</label>
-        </div>
-    </div>
-</div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted text-micro fw-bold" data-i18n="sim_type_label">TYP SIMULÁCIE</label>
+                        <div class="d-flex gap-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="simRole" id="simRoleInv" value="investor" checked>
+                                <label class="form-check-label fw-medium text-dark" for="simRoleInv" data-i18n="sim_type_inv">Investícia</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="simRole" id="simRoleBor" value="borrower">
+                                <label class="form-check-label fw-medium text-dark" for="simRoleBor" data-i18n="sim_type_bor">Pôžička</label>
+                            </div>
+                        </div>
+                    </div>
 
-<div class="mb-3">
-    <label class="form-label text-muted text-micro fw-bold" data-i18n="sim_currency_label">MENA</label>
-    <select id="simCurrencySelect" class="form-select shadow-sm">
-        <option value="EUR">EUR</option>
-        <option value="USDC">USDC</option>
-        <option value="USDT">USDT</option>
-        <option value="CHF">CHF</option>
-        <option value="CZK">CZK</option>
-        <option value="PLN">PLN</option>
-    </select>
-</div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted text-micro fw-bold" data-i18n="sim_currency_label">MENA</label>
+                        <select id="simCurrencySelect" class="form-select shadow-sm">
+                            <option value="EUR">EUR</option>
+                            <option value="USDC">USDC</option>
+                            <option value="USDT">USDT</option>
+                            <option value="CHF">CHF</option>
+                            <option value="CZK">CZK</option>
+                            <option value="PLN">PLN</option>
+                        </select>
+                    </div>
 
-    <div class="mb-3">
-    <label for="simAmount" class="form-label text-muted text-micro fw-bold"><span id="lblModalAmount" data-i18n="sim_amount_label">ČIASTKA</span> (<span id="simCurrencyLabel1">€</span>)</label>
-    <div class="input-group">
-        <input type="number" class="form-control" id="simAmount" min="100" step="100" placeholder="5000" required>
-        <span class="input-group-text bg-light text-muted" id="simCurrencyLabel2">€</span>
-    </div>
-</div>
-<div class="mb-3">
-    <label for="simRate" class="form-label text-muted text-micro fw-bold" data-i18n="sim_rate_label">ROČNÝ ÚROK (%)</label>
-    <input type="number" class="form-control" id="simRate" min="1" step="0.1" placeholder="10.5" required>
-</div>
-<div class="mb-3">
-    <label for="simMonths" class="form-label text-muted text-micro fw-bold" data-i18n="sim_months_label">DĹŽKA (Mesiace)</label>
-    <input type="number" class="form-control" id="simMonths" min="1" step="1" placeholder="12" required>
-</div>
-</form>
+                    <div class="mb-3">
+                        <label for="simAmount" class="form-label text-muted text-micro fw-bold"><span id="lblModalAmount" data-i18n="sim_amount_label">ČIASTKA</span> (<span id="simCurrencyLabel1">€</span>)</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="simAmount" min="100" step="100" placeholder="5000" required>
+                            <span class="input-group-text bg-light text-muted" id="simCurrencyLabel2">€</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="simRate" class="form-label text-muted text-micro fw-bold" data-i18n="sim_rate_label">ROČNÝ ÚROK (%)</label>
+                        <input type="number" class="form-control" id="simRate" min="1" step="0.1" placeholder="10.5" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="simMonths" class="form-label text-muted text-micro fw-bold" data-i18n="sim_months_label">DĹŽKA (Mesiace)</label>
+                        <input type="number" class="form-control" id="simMonths" min="1" step="1" placeholder="12" required>
+                    </div>
+                </form>
                 <div class="alert alert-info mt-3 mb-0 text-small py-2">
                     <i class="bi bi-info-circle me-1"></i> <span data-i18n="modal_info">Pre túto pôžičku sa automaticky vypočíta fiktívny BTC kolaterál (LTV 50%).</span>
                 </div>
@@ -455,6 +457,8 @@
     </div>
 </div>
 
+<!-- ==================== NÁSTROJE MODAL ==================== -->
+
 <div class="modal fade" id="analyticsModal" tabindex="-1" aria-labelledby="analyticsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
@@ -465,12 +469,17 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zavrieť"></button>
             </div>
             <div class="modal-body bg-body-tertiary pt-2">
+                <!-- TAB NAVIGÁCIA -->
                 <ul class="nav nav-pills mb-3 nav-justified bg-body p-1 rounded shadow-sm border border-light-subtle" id="analyticsTabs" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active fw-bold" id="compass-tab" data-bs-toggle="tab" data-bs-target="#compass-pane" type="button" role="tab"><i class="bi bi-compass me-1"></i> <span data-i18n="tab_compass">Trhový Kompas</span></button>
+                        <button class="nav-link active fw-bold" id="compass-tab" data-bs-toggle="tab" data-bs-target="#compass-pane" type="button" role="tab">
+                            <i class="bi bi-compass me-1"></i> <span data-i18n="tab_compass">Trhový Kompas</span>
+                        </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link fw-bold" id="hodl-tab" data-bs-toggle="tab" data-bs-target="#hodl-pane" type="button" role="tab"><i class="bi bi-piggy-bank me-1"></i> <span data-i18n="tab_hodl">HODL vs Investovať</span></button>
+                        <button class="nav-link fw-bold" id="hodl-tab" data-bs-toggle="tab" data-bs-target="#hodl-pane" type="button" role="tab">
+                            <i class="bi bi-piggy-bank me-1"></i> <span data-i18n="tab_hodl">HODL vs Investovať</span>
+                        </button>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link fw-bold d-flex align-items-center justify-content-center" id="duel-tab" data-bs-toggle="tab" data-bs-target="#duel-pane" type="button" role="tab">
@@ -487,9 +496,18 @@
                             <span data-i18n="tab_duel">Súboj investícií</span>
                         </button>
                     </li>
+                    <!-- ===== NOVÝ TAB: ROČNÝ PREHĽAD ===== -->
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold" id="yearly-tab" data-bs-toggle="tab" data-bs-target="#yearly-pane" type="button" role="tab">
+                            <i class="bi bi-calendar3 me-1"></i> <span data-i18n="tab_yearly">Ročný prehľad</span>
+                        </button>
+                    </li>
                 </ul>
+
+                <!-- TAB OBSAH -->
                 <div class="tab-content bg-body p-4 rounded-3 shadow-sm border border-light-subtle" id="analyticsTabContent">
-                    
+
+                    <!-- TAB: KOMPAS -->
                     <div class="tab-pane fade show active" id="compass-pane" role="tabpanel" tabindex="0">
                         <div class="text-center">
                             <h5 class="fw-bold mb-1" data-i18n="compass_title">Kto má dnes na trhu výhodu?</h5>
@@ -505,6 +523,7 @@
                         </div>
                     </div>
 
+                    <!-- TAB: HODL vs INVEST -->
                     <div class="tab-pane fade" id="hodl-pane" role="tabpanel" tabindex="0">
                         <div class="row g-4">
                             <div class="col-md-5 border-end border-light-subtle">
@@ -575,6 +594,7 @@
                         </div>
                     </div>
 
+                    <!-- TAB: SÚBOJ INVESTÍCIÍ -->
                     <div class="tab-pane fade" id="duel-pane" role="tabpanel" tabindex="0">
                         <div class="text-center mb-4">
                             <h5 class="fw-bold mb-1 text-body-emphasis" data-i18n="duel_title">A/B Porovnávač príležitostí</h5>
@@ -624,32 +644,47 @@
                         </div>
 
                         <div class="row g-3 text-center">
-    <div class="col-12">
-        <p class="text-micro text-muted fw-bold mb-1" data-i18n="duel_total_profit">Celkový zisk</p>
-        <div class="d-flex justify-content-center gap-5">
-            <div>
-                <span class="d-block text-micro text-primary fw-bold">A</span>
-                <span class="fs-4 fw-bold text-body-emphasis" id="duelTotalA">0</span>
-            </div>
-            <div>
-                <span class="d-block text-micro text-info fw-bold">B</span>
-                <span class="fs-4 fw-bold text-body-emphasis" id="duelTotalB">0</span>
-            </div>
-        </div>
-    </div>
-</div>
+                            <div class="col-12">
+                                <p class="text-micro text-muted fw-bold mb-1" data-i18n="duel_total_profit">Celkový zisk</p>
+                                <div class="d-flex justify-content-center gap-5">
+                                    <div>
+                                        <span class="d-block text-micro text-primary fw-bold">A</span>
+                                        <span class="fs-4 fw-bold text-body-emphasis" id="duelTotalA">0</span>
+                                    </div>
+                                    <div>
+                                        <span class="d-block text-micro text-info fw-bold">B</span>
+                                        <span class="fs-4 fw-bold text-body-emphasis" id="duelTotalB">0</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         
                         <div class="mt-4 alert alert-light border border-light-subtle shadow-sm text-center py-2 mb-0" id="duelWinnerAlert">
                             Načítavam...
                         </div>
-                        
                     </div>
 
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+                    <!-- ===== NOVÝ TAB: ROČNÝ PREHĽAD ===== -->
+                    <div class="tab-pane fade" id="yearly-pane" role="tabpanel" tabindex="0">
+                        <div class="text-center mb-4">
+                            <h5 class="fw-bold mb-1 text-body-emphasis" data-i18n="yearly_title">Ročný prehľad úrokov</h5>
+                            <p class="text-muted text-small" data-i18n="yearly_desc">Skutočne prijaté úroky za uzavreté zmluvy a plánované príjmy z aktívnych zmlúv — ideálne pre daňové priznanie.</p>
+                        </div>
+                        <div id="yearlyOverviewContent">
+                            <div class="text-center text-muted py-5 opacity-50">
+                                <i class="bi bi-cloud-upload fs-2 d-block mb-2"></i>
+                                <span data-i18n="yearly_no_data">Načítajte CSV súbor pre zobrazenie ročného prehľadu.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div><!-- /tab-content -->
+            </div><!-- /modal-body -->
+        </div><!-- /modal-content -->
+    </div><!-- /modal-dialog -->
+</div><!-- /analyticsModal -->
+
+<!-- ==================== CYKLUS PÔŽIČKY MODAL ==================== -->
 
 <div class="modal fade" id="cycleModal" tabindex="-1" aria-labelledby="cycleModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
@@ -664,12 +699,10 @@
                 <div class="row g-0 h-100">
                     <div class="col-md-4 col-lg-3 bg-body border-end border-light-subtle p-3 cycle-timeline-panel">
                         <h6 class="text-muted text-micro fw-bold mb-3 px-2" data-i18n="guide_phases_title">FÁZY PODĽA ZMLUVY</h6>
-                        <div id="guideTimelineMenu">
-                            </div>
+                        <div id="guideTimelineMenu"></div>
                     </div>
                     <div class="col-md-8 col-lg-9 p-4 p-md-5">
-                        <div id="guideStepDetail">
-                            </div>
+                        <div id="guideStepDetail"></div>
                     </div>
                 </div>
             </div>

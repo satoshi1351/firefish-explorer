@@ -385,3 +385,248 @@ document.addEventListener('DOMContentLoaded', () => {
         duelTab.addEventListener('shown.bs.tab', renderDuelSimulator);
     }
 });
+
+function renderYearlyOverview() {
+    const container = document.getElementById('yearlyOverviewContent');
+    if (!container) return;
+ 
+    const appState = typeof state !== 'undefined' ? state : (window.state || null);
+ 
+    if (!appState || !appState.rawData || appState.rawData.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-5 opacity-50">
+                <i class="bi bi-cloud-upload fs-2 d-block mb-2"></i>
+                <span>${t('yearly_no_data') || 'Načítajte CSV súbor pre zobrazenie ročného prehľadu.'}</span>
+            </div>`;
+        return;
+    }
+ 
+    const role = appState.currentRoleView;
+    const sym = appState.currencySymbol || '€';
+    const isInv = role === 'investor';
+    const today = new Date();
+    const currentYear = today.getFullYear();
+ 
+    // Zoberieme všetky zmluvy pre aktuálnu rolu (reálne aj simulované)
+    const allLoans = appState.rawData.filter(d => d.role === role);
+ 
+    // --- VÝPOČET PER ROK ---
+    // Štruktúra: { 2024: { realized: 0, planned: 0, accrued: 0, loanCount: 0, loans: [] }, ... }
+    const yearlyData = {};
+ 
+    allLoans.forEach(loan => {
+        if (!loan.profit || loan.profit === 0) return;
+ 
+        const endDate = loan.endDate ? new Date(loan.endDate) : null;
+        if (!endDate) return;
+ 
+        const year = endDate.getFullYear();
+ 
+        if (!yearlyData[year]) {
+            yearlyData[year] = { realized: 0, planned: 0, accrued: 0, loanCount: 0, loans: [] };
+        }
+ 
+        yearlyData[year].loanCount++;
+        yearlyData[year].loans.push(loan);
+ 
+        if (loan.isClosed || loan.status === 'CLOSED') {
+            // Skutočne zinkasované (uzavreté zmluvy)
+            yearlyData[year].realized += loan.profit;
+        } else if (loan.isActive) {
+            // Nabehnuto pro-rata pre VŠETKY aktívne zmluvy naprieč všetkými rokmi
+            // — rovnaký vzorec ako calculateMetrics() na hlavnej stránke:
+            // accruedProfit += d.profit * (d.progressPct / 100)
+            yearlyData[year].accrued += loan.profit * (loan.progressPct / 100);
+            yearlyData[year].planned += loan.profit;
+        }
+    });
+ 
+    // Zoradíme roky zostupne (najnovší hore)
+    const sortedYears = Object.keys(yearlyData).map(Number).sort((a, b) => b - a);
+ 
+    if (sortedYears.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-4 opacity-50">
+                <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                <span>${t('yearly_empty') || 'Žiadne zmluvy s dátumom splatnosti.'}</span>
+            </div>`;
+        return;
+    }
+ 
+    // --- CELKOVÝ SÚČET — sedí s hlavnou stránkou ---
+    const totalRealized = sortedYears.reduce((s, y) => s + yearlyData[y].realized, 0);
+    const totalAccrued  = sortedYears.reduce((s, y) => s + yearlyData[y].accrued, 0);
+    const totalPlanned  = sortedYears.reduce((s, y) => s + yearlyData[y].planned, 0);
+ 
+    const fmt = (n) => n.toLocaleString('sk-SK', { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+    const signClass = isInv ? 'text-success' : 'text-danger';
+    const sign = isInv ? '+' : '−';
+ 
+    const disclaimerText = t('yearly_disclaimer') ||
+        'Dátumy vychádzajú zo systémových záznamov platformy. Pre daňové účely vždy overte skutočné dátumy bankových prevodov.';
+ 
+    let html = '';
+ 
+    // --- SÚHRNNÉ KPI KARTY ---
+    html += `
+    <div class="row g-3 mb-4">
+        <div class="col-4 text-center">
+            <div class="p-3 rounded-3 border border-success-subtle bg-success-subtle shadow-sm">
+                <div class="text-micro text-muted fw-bold mb-1">${t('yearly_kpi_realized') || 'SKUTOČNE PRIJATÉ'}</div>
+                <div class="fs-5 fw-bold ${signClass}">${sign}${fmt(totalRealized)} ${sym}</div>
+                <div class="text-micro text-muted">${t('yearly_kpi_realized_sub') || 'Uzavreté zmluvy'}</div>
+            </div>
+        </div>
+        <div class="col-4 text-center">
+            <div class="p-3 rounded-3 border border-info-subtle bg-info-subtle shadow-sm">
+                <div class="text-micro text-muted fw-bold mb-1">${t('yearly_kpi_accrued') || 'NABEHNUTO DOTERAZ'}</div>
+                <div class="fs-5 fw-bold text-info">${sign}${fmt(totalAccrued)} ${sym}</div>
+                <div class="text-micro text-muted">${t('yearly_kpi_accrued_sub') || 'Aktívne zmluvy'}</div>
+            </div>
+        </div>
+        <div class="col-4 text-center">
+            <div class="p-3 rounded-3 border border-secondary-subtle bg-body-tertiary shadow-sm">
+                <div class="text-micro text-muted fw-bold mb-1">${t('yearly_kpi_planned') || 'PLÁNOVANÉ CELKOM'}</div>
+                <div class="fs-5 fw-bold text-secondary">${sign}${fmt(totalPlanned)} ${sym}</div>
+                <div class="text-micro text-muted">${t('yearly_kpi_planned_sub') || 'Otvorené zmluvy'}</div>
+            </div>
+        </div>
+    </div>`;
+ 
+    // --- ROČNÉ KARTY ---
+    sortedYears.forEach(year => {
+        const yd = yearlyData[year];
+        const isPast    = year < currentYear;
+        const isCurrent = year === currentYear;
+ 
+        let yearBadgeClass = 'bg-secondary-subtle text-secondary-emphasis border-secondary-subtle';
+        let yearIcon = 'bi-calendar3';
+        let yearLabel = t('yearly_future') || 'Budúci rok';
+ 
+        if (isPast) {
+            yearBadgeClass = 'bg-success-subtle text-success-emphasis border-success-subtle';
+            yearIcon = 'bi-check-circle-fill';
+            yearLabel = t('yearly_past') || 'Uzavretý rok';
+        } else if (isCurrent) {
+            yearBadgeClass = 'bg-primary-subtle text-primary-emphasis border-primary-subtle';
+            yearIcon = 'bi-calendar-week-fill';
+            yearLabel = t('yearly_current') || 'Aktuálny rok';
+        }
+ 
+        // --- DETAIL ZMLÚV ---
+        let loansDetailHtml = '';
+        yd.loans.forEach(loan => {
+            const profitFmt = fmt(Math.abs(loan.profit));
+            const loanStatus = loan.isClosed
+                ? `<span class="badge bg-success-subtle text-success-emphasis border border-success-subtle">${t('tbl_closed') || 'Uzavretá'}</span>`
+                : (loan.isSimulated
+                    ? `<span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle">SIM</span>`
+                    : `<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">${t('filter_active') || 'Aktívna'}</span>`);
+            const maturityFmt = loan.rawMaturity || (loan.endDate
+                ? new Date(loan.endDate).toLocaleDateString(currentLang === 'sk' ? 'sk-SK' : 'en-US')
+                : '—');
+ 
+            // Pre aktívne zmluvy zobrazíme nabehnuto v zátvorkách
+            const accruedForLoan = loan.isActive
+                ? `<span class="text-muted text-micro d-block">${t('yearly_accrued') || 'nabehnuto'}: ${sign}${fmt(loan.profit * (loan.progressPct / 100))} ${sym}</span>`
+                : '';
+ 
+            loansDetailHtml += `
+                <tr class="align-middle">
+                    <td class="text-secondary fw-bold font-monospace small">${loan.id}</td>
+                    <td class="small text-muted">${maturityFmt}</td>
+                    <td>${loanStatus}</td>
+                    <td class="text-end small">
+                        <span class="fw-bold ${signClass}">${sign}${profitFmt} ${sym}</span>
+                        ${accruedForLoan}
+                    </td>
+                </tr>`;
+        });
+ 
+        html += `
+        <div class="mb-3 border border-light-subtle rounded-3 overflow-hidden shadow-sm">
+            <div class="d-flex align-items-center justify-content-between px-3 py-2 bg-body-tertiary border-bottom border-light-subtle">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi ${yearIcon} text-body-secondary"></i>
+                    <span class="fw-bold fs-6 text-body-emphasis">${year}</span>
+                    <span class="badge ${yearBadgeClass} border small">${yearLabel}</span>
+                </div>
+                <span class="text-micro text-muted">${yd.loanCount} ${t('yearly_contracts') || 'zmlúv'}</span>
+            </div>
+ 
+            <div class="px-3 py-2 bg-body">
+                <div class="row g-2 text-center mb-2">`;
+ 
+        if (yd.realized > 0) {
+            html += `
+                    <div class="col">
+                        <div class="small text-muted">${t('yearly_realized') || 'Prijaté'}</div>
+                        <div class="fw-bold ${signClass}">${sign}${fmt(yd.realized)} ${sym}</div>
+                    </div>`;
+        }
+        if (yd.accrued > 0) {
+            html += `
+                    <div class="col">
+                        <div class="small text-muted">${t('yearly_accrued') || 'Nabehnuto'}</div>
+                        <div class="fw-bold text-info">${sign}${fmt(yd.accrued)} ${sym}</div>
+                    </div>`;
+        }
+        if (yd.planned > 0) {
+            html += `
+                    <div class="col">
+                        <div class="small text-muted">${t('yearly_planned') || 'Plánované'}</div>
+                        <div class="fw-bold text-secondary">${sign}${fmt(yd.planned)} ${sym}</div>
+                    </div>`;
+        }
+ 
+        html += `
+                </div>
+ 
+                <div class="accordion accordion-flush" id="acc_${year}">
+                    <div class="accordion-item border-0 bg-transparent">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed py-1 px-0 bg-transparent text-muted small shadow-none"
+                                    type="button" data-bs-toggle="collapse" data-bs-target="#acc_body_${year}">
+                                <i class="bi bi-list-ul me-1"></i> ${t('yearly_show_detail') || 'Zobraziť detail zmlúv'}
+                            </button>
+                        </h2>
+                        <div id="acc_body_${year}" class="accordion-collapse collapse">
+                            <div class="accordion-body p-0 pt-2">
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead class="text-micro text-muted">
+                                        <tr>
+                                            <th>${t('tbl_id') || 'ID'}</th>
+                                            <th>${t('tbl_maturity') || 'Splatnosť'}</th>
+                                            <th>${t('tbl_status') || 'Status'}</th>
+                                            <th class="text-end">${isInv ? (t('dyn_net_profit') || 'Zisk') : (t('dyn_int_cost') || 'Úrok')}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>${loansDetailHtml}</tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    });
+ 
+    // Disclaimer
+    html += `
+    <div class="alert alert-secondary border-0 text-center small opacity-75 mt-2 mb-0">
+        <i class="bi bi-info-circle me-1"></i> ${disclaimerText}
+    </div>`;
+ 
+    container.innerHTML = html;
+}
+ 
+// Spustí sa pri kliknutí na tab Ročný prehľad
+document.addEventListener('DOMContentLoaded', () => {
+    const yearlyTab = document.getElementById('yearly-tab');
+    if (yearlyTab) {
+        yearlyTab.addEventListener('shown.bs.tab', renderYearlyOverview);
+    }
+});
+ 
+// Export pre prípad manuálneho volania
+window.renderYearlyOverview = renderYearlyOverview;

@@ -34,6 +34,10 @@ The latest addition to Firefish Explorer is a dedicated analytics module designe
   - *What it is:* An A/B testing tool to compare two different loan offers.
   - *How it works:* By entering the principal, APY, and duration of two separate offers, the tool calculates the **Total Expected Profit** and evaluates the overall investment efficiency. It acts as a smart judge, revealing which loan makes your money work faster and smarter (based on APY and time constraints), rather than just blindly looking at the highest absolute return.
 
+- **Annual Interest Overview:**
+  - *What it is:* A comprehensive yearly breakdown of your earned and expected interest, designed to be an ideal companion for tax return preparation.
+  - *How it works:* It automatically categorizes your loans into past, current, and future years based on their maturity dates. It calculates the "Actually Received" interest from closed contracts, the "Accrued" interest from active contracts, and the "Total Planned" income, giving you a clear financial summary and contract details for any given year.
+
 ## Legal & Accuracy Note
 Please note that Firefish EXPLORER is an **analytical and educational tool**. 
 - **Dates:** Loan lifecycle phases and dates are based on platform system records. Actual bank transfer dates (important for tax/accounting) may vary by 1-2 business days.
