@@ -33,7 +33,8 @@ function getLoansByStage(stageId) {
     const effectiveBtcPrice = appState.currentBtcPrice * (1 + stressDrop / 100);
 
     return appState.displayData.filter(loan => {
-        if (loan.status === 'CLOSED' && stageId !== 'liquidation') return false;
+        // Uzavreté zmluvy zobrazíme len vo fázach kde to dáva zmysel
+        if (loan.status === 'CLOSED' && stageId !== 'liquidation' && stageId !== 'maturity_res') return false;
 
         const startDate = loan.startDate ? new Date(loan.startDate) : null;
         if (startDate) startDate.setHours(0, 0, 0, 0);

@@ -152,7 +152,7 @@ function refreshDashboard() {
 
     const dom = getDom();
     const filter = dom.statusFilter.value;
-    const stressPct = parseInt(dom.stressSlider.value);
+    const stressPct = parseInt(dom.stressSlider.value) || 0;
     const role = state.currentRoleView;
 
     let filteredData = state.rawData.filter(d => 
@@ -201,17 +201,31 @@ setInterval(async () => {
 }, 60000);
 
 function getMyId(data) {
-    const counts = {};
+    const invCounts = {};
+    const borCounts = {};
     data.forEach(r => {
         const inv = r['Investor id']; const bor = r['Borrower id'];
-        if(inv) counts[inv] = (counts[inv] || 0) + 1;
-        if(bor) counts[bor] = (counts[bor] || 0) + 1;
+        if (inv) invCounts[inv] = (invCounts[inv] || 0) + 1;
+        if (bor) borCounts[bor] = (borCounts[bor] || 0) + 1;
     });
-    let bestId = null; let maxCount = 0;
-    for(let id in counts) {
-        if(counts[id] > maxCount) { maxCount = counts[id]; bestId = id; }
+
+    // Nájdeme ID ktoré sa vyskytuje najčastejšie na strane investora
+    let bestInvId = null; let maxInv = 0;
+    for (let id in invCounts) {
+        if (invCounts[id] > maxInv) { maxInv = invCounts[id]; bestInvId = id; }
     }
-    return bestId;
+
+    // Nájdeme ID ktoré sa vyskytuje najčastejšie na strane dlžníka
+    let bestBorId = null; let maxBor = 0;
+    for (let id in borCounts) {
+        if (borCounts[id] > maxBor) { maxBor = borCounts[id]; bestBorId = id; }
+    }
+
+    // Ak sa ID líšia alebo len jedno existuje, vrátime to dominantnejšie
+    // Pri rovnakom počte preferujeme investor ID (obvyklejší prípad)
+    if (maxInv >= maxBor && bestInvId) return bestInvId;
+    if (maxBor > maxInv && bestBorId) return bestBorId;
+    return bestInvId || bestBorId;
 }
 
 function parseAndInitApp(csvText) {
@@ -516,10 +530,8 @@ function parseRawData(data) {
         const isClosed = status === 'CLOSED';
         const isActive = status === 'ACTIVE';
 
+        // distancePct a chiPct sa počítajú v recalculateBaseData() po načítaní BTC ceny
         let distancePct = 0;
-        if (isActive && liquidationPrice > 0 && state.currentBtcPrice > 0) {
-            distancePct = ((state.currentBtcPrice - liquidationPrice) / state.currentBtcPrice) * 100;
-        }
 
         let annualYield = 0; let totalDays = 0;
         if (startDate && endDate) {
@@ -1304,7 +1316,12 @@ window.deleteSimulation = function(id) {
 
 document.getElementById('btnClearData').addEventListener('click', function() {
     if(confirm(t('msg_del'))) {
-        localStorage.clear(); location.reload();    
+        // Mažeme len Firefish kľúče — theme a iné nastavenia zostanú nedotknuté
+        const keysToRemove = Object.keys(localStorage).filter(k =>
+            k.startsWith('firefish') || k.startsWith('lastBtcPrice')
+        );
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+        location.reload();
     }
 });
 

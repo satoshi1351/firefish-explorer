@@ -119,6 +119,10 @@ if (analyticsModal) {
     analyticsModal.addEventListener('show.bs.modal', function () {
         renderMarketCompass();
     });
+    // Reset pri zatvorení — pri ďalšom otvorení sa načítajú čerstvé dáta
+    analyticsModal.addEventListener('hidden.bs.modal', function () {
+        isCompassLoaded = false;
+    });
 }
 
 // --- HODL vs FIREFISH SIMULATOR ---
