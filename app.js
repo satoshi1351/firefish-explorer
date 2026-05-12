@@ -816,9 +816,20 @@ function parseRawData(data) {
             cashflowMonth = `${endDate.getFullYear()}-${m}`;
         }
         
+        // --- NAŠA NOVÁ OPRAVA: AK JE ZMLUVA 100% SPLATENÁ, ZMENÍME JU NA CLOSED ---
+        let finalStatus = status;
+        let finalIsClosed = isClosed;
+        let finalIsActive = isActive;
+        
+        if (progressPct >= 100) {
+            finalStatus = 'CLOSED';
+            finalIsClosed = true;
+            finalIsActive = false;
+        }
+
         parsed.push({
-            id: row['Investment id'] || row['Loan id'] || 'N/A', invested, due, rate, status, profit,
-            isClosed, isActive, cashflowMonth, liquidationPrice, collateralBtc, annualYield, ltv, distancePct,
+            id: row['Investment id'] || row['Loan id'] || 'N/A', invested, due, rate, status: finalStatus, profit,
+            isClosed: finalIsClosed, isActive: finalIsActive, cashflowMonth, liquidationPrice, collateralBtc, annualYield, ltv, distancePct,
             investorId, borrowerId, role,
             startDate, endDate, progressPct, remainingDays,
             rawMaturity: endDateRaw || (endDate ? endDate.toLocaleDateString(currentLang === 'sk' ? 'sk-SK' : 'en-US') : '-'),
