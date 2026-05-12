@@ -46,6 +46,25 @@
                 <i class="bi bi-wifi me-1"></i> <span id="lblNetworkStatus" data-i18n="status_online">Online</span>
             </span>
 
+            <select id="currencySelect" class="form-select form-select-sm shadow-sm" style="width: 80px; padding: 0.25rem 1.5rem 0.25rem 0.5rem; font-size: 0.75rem; font-weight: 600; height: var(--action-btn-size); border-radius: var(--action-btn-radius); border: 1px solid var(--bs-border-color-translucent); background-color: var(--bs-body-bg); cursor: pointer;">
+                <option value="EUR">EUR</option>
+                <option value="CZK">CZK</option>
+                <option value="USDC">USDC</option>
+                <option value="USDT">USDT</option>
+                <option value="CHF">CHF</option>
+                <option value="PLN">PLN</option>
+            </select>
+
+            <button id="decimalToggle" class="unified-box action-btn shadow-sm" title="Show/hide decimals" style="width: var(--action-btn-size); font-size: 0.65rem; font-weight: 700;">
+                .0
+            </button>
+
+            <select id="langSelect" class="form-select form-select-sm shadow-sm" style="width: 52px; padding: 0.25rem 1.2rem 0.25rem 0.4rem; font-size: 0.7rem; font-weight: 700; height: var(--action-btn-size); border-radius: var(--action-btn-radius); border: 1px solid var(--bs-border-color-translucent); background-color: var(--bs-body-bg); cursor: pointer;" title="Language / Jazyk">
+                <option value="en">EN</option>
+                <option value="cs">CZ</option>
+                <option value="sk">SK</option>
+            </select>
+
             <div class="d-flex align-items-center gap-2 flex-nowrap action-group-wrapper">
                 <div id="themeSwitcher" class="theme-btn-group shadow-sm">
                     <span id="themeSwitchSun" class="theme-icon" title="Svetlý režim"><i class="bi bi-sun-fill"></i></span>
