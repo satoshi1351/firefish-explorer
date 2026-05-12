@@ -651,18 +651,20 @@ function parseDate(dateStr, isAmericanFormat = false) {
     // Remove trailing dot if present (e.g. "15.01.2024.")
     if (str.endsWith('.')) str = str.slice(0, -1);
     
-    // Remove any extra text after the date (e.g. "15.01.2024 12:00" or "15.01.2024 (some note)")
-    str = str.split(' ')[0];
+    // Namiesto odseknutia podľa medzery (čo ničilo formát "15. 01. 2024")
+    // radšej bezpečne odstránime iba prípadný čas na konci (napr. " 12:00")
+    str = str.replace(/\s+\d{1,2}:\d{2}.*$/, '');
 
     // --- 1. ISO format: yyyy-mm-dd or yyyy/mm/dd ---
-    const isoMatch = str.match(/^(\d{4})[\-/](\d{1,2})[\-/](\d{1,2})$/);
+    // Odstránil som znak "$" na konci, aby to tolerovalo aj iné znaky po dátume
+    const isoMatch = str.match(/^(\d{4})[\-/](\d{1,2})[\-/](\d{1,2})/);
     if (isoMatch) {
         const dt = new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]));
         return isNaN(dt.getTime()) ? null : dt;
     }
 
     // --- 2. European dot format: dd.mm.yyyy or dd. mm. yyyy or d.m.yyyy ---
-    const dotMatch = str.match(/^(\d{1,2})\s*\.\s*(\d{1,2})\s*\.\s*(\d{4})$/);
+    const dotMatch = str.match(/^(\d{1,2})\s*\.\s*(\d{1,2})\s*\.\s*(\d{4})/);
     if (dotMatch) {
         const day = parseInt(dotMatch[1], 10);
         const month = parseInt(dotMatch[2], 10);
@@ -674,7 +676,7 @@ function parseDate(dateStr, isAmericanFormat = false) {
     }
 
     // --- 3. Slash format: mm/dd/yyyy (American) or dd/mm/yyyy (European) ---
-    const slashMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    const slashMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
     if (slashMatch) {
         let month = parseInt(slashMatch[1], 10);
         let day = parseInt(slashMatch[2], 10);
@@ -692,7 +694,7 @@ function parseDate(dateStr, isAmericanFormat = false) {
     }
 
     // --- 4. Dash format: dd-mm-yyyy or d-m-yyyy ---
-    const dashMatch = str.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+    const dashMatch = str.match(/^(\d{1,2})-(\d{1,2})-(\d{4})/);
     if (dashMatch) {
         const day = parseInt(dashMatch[1], 10);
         const month = parseInt(dashMatch[2], 10);
