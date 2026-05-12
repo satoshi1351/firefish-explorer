@@ -24,7 +24,7 @@ async function renderMarketCompass() {
             
             // OPRAVENÉ FORMÁTOVANIE CENY (Bezpečné pre USDC/USDT)
             const symbol = state.currencySymbol || state.currency || '€';
-            const formattedPrice = Math.round(liqPrice).toLocaleString() + ' ' + symbol;
+            const formattedPrice = fmtMoney(liqPrice) + ' ' + symbol;
 
             let advantage = 'neutral';
             let advantageText = '';
@@ -180,30 +180,30 @@ function renderHodlSimulator() {
     const months = parseInt(elDuration.value) || 12;
     const futurePrice = parseFloat(elSlider.value) || currentPrice;
 
-    elFutureLabel.innerText = futurePrice.toLocaleString('sk-SK') + ' ' + currencySym;
+    elFutureLabel.innerText = fmtMoney(futurePrice) + ' ' + currencySym;
 
     // --- MATEMATIKA ---
     // 1. Firefish zisk alikvotne prepočítaný na mesiace (p.a. úrok / 12 * počet mesiacov)
     const timeRatio = months / 12;
     const firefishProfit = amount * (annualYield / 100) * timeRatio;
-    
+
     // 2. HODL Stratégia
     const btcBought = amount / currentPrice;
     const futureBtcValue = btcBought * futurePrice;
     const hodlProfit = futureBtcValue - amount;
-    
+
     // 3. Bod zlomu (Zohľadňuje časový úsek)
     const breakEvenPrice = currentPrice * (1 + ((annualYield / 100) * timeRatio));
 
     // --- VYKRESLENIE ---
-    document.getElementById('hodlBreakEven').innerText = breakEvenPrice.toLocaleString('sk-SK', {maximumFractionDigits: 0}) + ' ' + currencySym;
-    
+    document.getElementById('hodlBreakEven').innerText = fmtMoney(breakEvenPrice) + ' ' + currencySym;
+
     const ffProfitEl = document.getElementById('hodlFirefishProfit');
-    ffProfitEl.innerText = `+ ${firefishProfit.toLocaleString('sk-SK', {maximumFractionDigits: 0})} ${currencySym}`;
-    
+    ffProfitEl.innerText = `+ ${fmtMoney(firefishProfit)} ${currencySym}`;
+
     const hodlProfitEl = document.getElementById('hodlBtcProfit');
     const hodlSign = hodlProfit >= 0 ? '+' : '';
-    hodlProfitEl.innerText = `${hodlSign} ${hodlProfit.toLocaleString('sk-SK', {maximumFractionDigits: 0})} ${currencySym}`;
+    hodlProfitEl.innerText = `${hodlSign} ${fmtMoney(hodlProfit)} ${currencySym}`;
     hodlProfitEl.className = hodlProfit >= 0 ? 'fs-5 fw-bold text-warning' : 'fs-5 fw-bold text-danger';
 
     // Výpočet šírky pásikov (progress bars)
@@ -231,7 +231,7 @@ function renderHodlSimulator() {
     // Textové vyhodnotenie víťaza
     const alertBox = document.getElementById('hodlWinnerAlert');
     if (hodlProfit > firefishProfit) {
-        const diffFmt = (hodlProfit - firefishProfit).toLocaleString('sk-SK', {maximumFractionDigits: 0}) + ' ' + currencySym;
+        const diffFmt = fmtMoney(hodlProfit - firefishProfit) + ' ' + currencySym;
         const hodlWinText = (t('hodl_win_hodl') || `Pri tejto cene sa ti oplatí <strong>HODL</strong> (zarobíš o {diff} viac).`).replace('{diff}', diffFmt);
         
         alertBox.className = 'alert alert-warning shadow-sm py-2 mb-4 text-dark border-warning-subtle';
@@ -313,8 +313,8 @@ function renderDuelSimulator() {
     }
 
     // VYKRESLENIE DO HTML - Zobrazujeme priamo zadaný úrok p.a.
-    document.getElementById('duelTotalA').innerHTML = `${profitA.toLocaleString('sk-SK', {maximumFractionDigits: 0})} ${sym} <span class="d-block fs-6 fw-normal text-muted">(${rateA.toFixed(2)} % p.a.)</span>`;
-    document.getElementById('duelTotalB').innerHTML = `${profitB.toLocaleString('sk-SK', {maximumFractionDigits: 0})} ${sym} <span class="d-block fs-6 fw-normal text-muted">(${rateB.toFixed(2)} % p.a.)</span>`;
+    document.getElementById('duelTotalA').innerHTML = `${fmtMoney(profitA)} ${sym} <span class="d-block fs-6 fw-normal text-muted">(${rateA.toFixed(2)} % p.a.)</span>`;
+    document.getElementById('duelTotalB').innerHTML = `${fmtMoney(profitB)} ${sym} <span class="d-block fs-6 fw-normal text-muted">(${rateB.toFixed(2)} % p.a.)</span>`;
 
     // ZVÝRAZNENIE VÍŤAZA (Odpoveď na tvoj bod 1)
     document.getElementById('duelTotalA').className = `fs-4 fw-bold ${isAWinner ? 'text-success' : 'text-body-emphasis'}`;
@@ -462,7 +462,7 @@ function renderYearlyOverview() {
     const totalAccrued  = sortedYears.reduce((s, y) => s + yearlyData[y].accrued, 0);
     const totalPlanned  = sortedYears.reduce((s, y) => s + yearlyData[y].planned, 0);
  
-    const fmt = (n) => n.toLocaleString('sk-SK', { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+    const fmt = (n) => fmtNum(n, 2);
     const signClass = isInv ? 'text-success' : 'text-danger';
     const sign = isInv ? '+' : '−';
  

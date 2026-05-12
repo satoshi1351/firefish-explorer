@@ -453,6 +453,18 @@ button.unified-box:hover {
     background-color: var(--bs-secondary-bg);
 }
 
+/* --- DECIMAL TOGGLE BUTTON --- */
+#decimalToggle {
+    width: var(--action-btn-size);
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--bs-body-color);
+    cursor: pointer;
+}
+#decimalToggle:hover {
+    background-color: var(--bs-secondary-bg);
+}
+
 /* --- OPRAVY PRE TMAVÝ REŽIM (STRESS TEST A KONTRAST) --- */
 
 /* 1. Odznak MEDIUM a všetky žlté odznaky musia mať vždy čierny text */

@@ -19,28 +19,63 @@ const state = {
     charts: {}, sortCol: 'endDate', sortAsc: true,
     totalInvestedForTooltip: 0, myId: null, currentRoleView: 'investor',
     currency: 'EUR', currencySymbol: '€', hasImportedData: false,
-    exchangeRates: null
+    exchangeRates: null,
+    showDecimals: localStorage.getItem('firefish_show_decimals') === 'true'
 };
+
+// --- NUMBER FORMATTING HELPERS ---
+function fmtNum(value, decimalsIfOn) {
+    const d = state.showDecimals ? decimalsIfOn : 0;
+    return value.toLocaleString('sk-SK', {maximumFractionDigits: d, minimumFractionDigits: d});
+}
+
+function fmtMoney(value) {
+    return fmtNum(value, 2);
+}
+
+function fmtPct(value) {
+    return fmtNum(value, 1);
+}
+
+function fmtBtc(value) {
+    return fmtNum(value, 4);
+}
 
 Chart.register(window['chartjs-plugin-annotation']);
 
 // --- PREKLADY (i18n) LOGIKA ---
-const userLang = (navigator.language || navigator.userLanguage).split('-')[0];
-const currentLang = translations[userLang] ? userLang : 'en';
+let currentLang = (() => {
+    const savedLang = localStorage.getItem('firefish_language');
+    if (savedLang && translations[savedLang]) return savedLang;
+    let browserLang = (navigator.language || navigator.userLanguage).split('-')[0];
+    if (browserLang === 'cz') browserLang = 'cs';
+    return translations[browserLang] ? browserLang : 'en';
+})();
 
 function t(key) {
-    return translations[currentLang][key] || key;
+    return translations[currentLang]?.[key] || key;
+}
+
+function setLanguage(lang) {
+    if (!translations[lang]) return;
+    currentLang = lang;
+    localStorage.setItem('firefish_language', lang);
+    translateStaticDOM();
+    if (state.rawData && state.rawData.length > 0) {
+        refreshDashboard();
+    }
 }
 
 function translateStaticDOM() {
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
-        if (translations[currentLang][key]) {
+        if (translations[currentLang]?.[key]) {
             el.innerHTML = translations[currentLang][key];
         }
     });
-    if (document.title && document.querySelector('title[data-i18n]')) {
-        document.title = t(document.querySelector('title[data-i18n]').getAttribute('data-i18n'));
+    const titleEl = document.querySelector('title[data-i18n]');
+    if (document.title && titleEl) {
+        document.title = t(titleEl.getAttribute('data-i18n'));
     }
 }
 // ------------------------------
@@ -61,6 +96,69 @@ const convertCurrency = (amount, fromCurr, toCurr) => {
     if (!rateFrom || !rateTo) return amount;
     return amount * (rateTo / rateFrom);
 };
+
+async function switchDisplayCurrency(newCurrency) {
+    if (!newCurrency || newCurrency === state.currency) return;
+    const allowedCurrencies = ['EUR', 'USDC', 'USDT', 'CHF', 'CZK', 'PLN'];
+    if (!allowedCurrencies.includes(newCurrency)) return;
+
+    state.currency = newCurrency;
+    state.currencySymbol = CURRENCY_SYMBOLS[newCurrency] || newCurrency;
+    localStorage.setItem('firefish_display_currency', newCurrency);
+
+    await fetchBtcPrice();
+
+    // Re-convert all rawData from their original currencies
+    state.rawData.forEach(d => {
+        const fromCurr = d.origCurrency || newCurrency;
+        if (fromCurr !== newCurrency) {
+            d.invested = convertCurrency(d.origInvested, fromCurr, newCurrency);
+            d.due = convertCurrency(d.origDue, fromCurr, newCurrency);
+            if (d.origLiquidationPrice > 0) {
+                d.liquidationPrice = convertCurrency(d.origLiquidationPrice, fromCurr, newCurrency);
+            }
+        } else {
+            d.invested = d.origInvested;
+            d.due = d.origDue;
+            if (d.origLiquidationPrice > 0) {
+                d.liquidationPrice = d.origLiquidationPrice;
+            }
+        }
+
+        d.profit = d.due - d.invested;
+
+        const collateralValue = d.collateralBtc * state.currentBtcPrice;
+        d.ltv = collateralValue > 0 ? (d.due / collateralValue) * 100 : 0;
+
+        let totalDays = 0;
+        if (d.startDate && d.endDate) {
+            totalDays = (d.endDate - d.startDate) / (1000 * 60 * 60 * 24);
+            if (totalDays > 0 && d.invested > 0) {
+                d.annualYield = (d.profit / d.invested) * (365 / totalDays) * 100;
+            } else {
+                d.annualYield = 0;
+            }
+        }
+        if (d.annualYield === 0 && d.rate > 0) {
+            d.annualYield = d.rate;
+        }
+    });
+
+    // Update UI controls
+    const currencySelect = document.getElementById('currencySelect');
+    if (currencySelect) currencySelect.value = newCurrency;
+
+    const l1 = document.getElementById('simCurrencyLabel1');
+    const l2 = document.getElementById('simCurrencyLabel2');
+    if (l1) l1.innerText = state.currencySymbol;
+    if (l2) l2.innerText = state.currencySymbol;
+
+    const currSel = document.getElementById('simCurrencySelect');
+    if (currSel) currSel.value = newCurrency;
+
+    recalculateBaseData();
+    refreshDashboard();
+}
 
 const sunIcon = document.getElementById('themeSwitchSun');
 const moonIcon = document.getElementById('themeSwitchMoon');
@@ -114,7 +212,7 @@ async function fetchBtcPrice() {
         
         const now = new Date();
         const timeString = now.toLocaleTimeString(currentLang === 'sk' ? 'sk-SK' : 'en-US');
-        priceLabel.innerHTML = `${t('price_live')} <strong>${state.currentBtcPrice.toLocaleString('sk-SK', {maximumFractionDigits: 2})} ${state.currencySymbol}</strong> (${t('price_upd')} ${timeString})`;
+        priceLabel.innerHTML = `${t('price_live')} <strong>${fmtMoney(state.currentBtcPrice)} ${state.currencySymbol}</strong> (${t('price_upd')} ${timeString})`;
     } catch (error) {
         const savedRates = localStorage.getItem(`firefish_exchange_rates`);
         if (savedRates) {
@@ -123,7 +221,7 @@ async function fetchBtcPrice() {
 
         const savedPrice = localStorage.getItem(`lastBtcPrice_${state.currency}`);
         state.currentBtcPrice = savedPrice ? parseFloat(savedPrice) : (state.currency === 'EUR' ? 60000 : 0);
-        priceLabel.innerHTML = `${t('price_err')} <strong>${state.currentBtcPrice.toLocaleString('sk-SK', {maximumFractionDigits: 2})} ${state.currencySymbol}</strong>`;
+        priceLabel.innerHTML = `${t('price_err')} <strong>${fmtMoney(state.currentBtcPrice)} ${state.currencySymbol}</strong>`;
     }
 }
 
@@ -256,21 +354,37 @@ function parseAndInitApp(csvText) {
 
             state.myId = getMyId(results.data);
             await fetchBtcPrice();
+            
+            // Debug: log all CSV column names from first row
+            if (results.data && results.data.length > 0) {
+                // Debug: log CSV columns for troubleshooting
+                console.log('CSV columns:', Object.keys(results.data[0]));
+            }
+            
             state.rawData = parseRawData(results.data);
 
             const savedSims = JSON.parse(localStorage.getItem('firefish_simulated_loans') || '[]');
             savedSims.forEach(s => {
                 s.startDate = new Date(s.startDate);
                 s.endDate = new Date(s.endDate);
+                // Backward compatibility: add orig values if missing
+                if (!s.origCurrency) {
+                    s.origInvested = s.invested;
+                    s.origDue = s.due;
+                    s.origLiquidationPrice = s.liquidationPrice;
+                    s.origCurrency = state.currency;
+                }
                 state.rawData.push(s);
             });
-            
+
+            localStorage.setItem('firefish_display_currency', state.currency);
+
             const hasInvestments = state.rawData.some(d => d.role === 'investor');
             const hasDebts = state.rawData.some(d => d.role === 'borrower');
-            
+
             const radioInv = document.getElementById('roleInvestor');
             const radioBor = document.getElementById('roleBorrower');
-            
+
             radioInv.disabled = false;
             radioBor.disabled = false;
 
@@ -279,7 +393,7 @@ function parseAndInitApp(csvText) {
             } else if (!hasInvestments && hasDebts) {
                 radioBor.checked = true; state.currentRoleView = 'borrower';
             } else {
-                radioInv.checked = true; state.currentRoleView = 'investor'; 
+                radioInv.checked = true; state.currentRoleView = 'investor';
             }
 
             document.getElementById('statusFilter').disabled = false;
@@ -291,12 +405,16 @@ function parseAndInitApp(csvText) {
             document.getElementById('stressPlaceholder').classList.add('d-none');
             document.getElementById('stressPanel').classList.remove('d-none');
 
+            // Sync currency switcher
+            const currencySelect = document.getElementById('currencySelect');
+            if (currencySelect) currencySelect.value = state.currency;
+
             recalculateBaseData();
-            
+
             const dom = getDom();
             if (dom.stressSlider) {
                 dom.stressSlider.value = 0;
-                updateStressUI(0); 
+                updateStressUI(0);
             }
 
             refreshDashboard();
@@ -310,7 +428,7 @@ document.getElementById('simulationModal').addEventListener('show.bs.modal', fun
     const currSel = document.getElementById('simCurrencySelect');
     if (currSel) {
         currSel.value = state.currency;
-        currSel.disabled = state.hasImportedData || state.rawData.length > 0; 
+        currSel.disabled = false;
     }
     const l1 = document.getElementById('simCurrencyLabel1');
     const l2 = document.getElementById('simCurrencyLabel2');
@@ -348,13 +466,40 @@ document.querySelectorAll('input[name="simRole"]').forEach(radio => {
 const simCurrSelect = document.getElementById('simCurrencySelect');
 if (simCurrSelect) {
     simCurrSelect.addEventListener('change', function(e) {
-        if(!state.hasImportedData) {
-            const sym = CURRENCY_SYMBOLS[e.target.value] || e.target.value;
-            const l1 = document.getElementById('simCurrencyLabel1');
-            const l2 = document.getElementById('simCurrencyLabel2');
-            if(l1) l1.innerText = sym;
-            if(l2) l2.innerText = sym;
+        const sym = CURRENCY_SYMBOLS[e.target.value] || e.target.value;
+        const l1 = document.getElementById('simCurrencyLabel1');
+        const l2 = document.getElementById('simCurrencyLabel2');
+        if(l1) l1.innerText = sym;
+        if(l2) l2.innerText = sym;
+    });
+}
+
+const currencySelect = document.getElementById('currencySelect');
+if (currencySelect) {
+    currencySelect.value = state.currency;
+    currencySelect.addEventListener('change', async function(e) {
+        await switchDisplayCurrency(e.target.value);
+    });
+}
+
+const decimalToggle = document.getElementById('decimalToggle');
+if (decimalToggle) {
+    decimalToggle.innerText = state.showDecimals ? '.00' : '.0';
+    decimalToggle.addEventListener('click', function() {
+        state.showDecimals = !state.showDecimals;
+        localStorage.setItem('firefish_show_decimals', state.showDecimals);
+        decimalToggle.innerText = state.showDecimals ? '.00' : '.0';
+        if (state.rawData && state.rawData.length > 0) {
+            refreshDashboard();
         }
+    });
+}
+
+const langSelect = document.getElementById('langSelect');
+if (langSelect) {
+    langSelect.value = currentLang;
+    langSelect.addEventListener('change', function(e) {
+        setLanguage(e.target.value);
     });
 }
 
@@ -403,9 +548,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (savedCsv) {
         parseAndInitApp(savedCsv);
     } else {
-        const savedCurrency = localStorage.getItem('firefish_simulated_currency');
-        if (savedCurrency) {
-            state.currency = savedCurrency;
+        const savedDisplayCurrency = localStorage.getItem('firefish_display_currency');
+        const savedSimCurrency = localStorage.getItem('firefish_simulated_currency');
+        if (savedDisplayCurrency) {
+            state.currency = savedDisplayCurrency;
+            state.currencySymbol = CURRENCY_SYMBOLS[state.currency] || state.currency;
+        } else if (savedSimCurrency) {
+            state.currency = savedSimCurrency;
             state.currencySymbol = CURRENCY_SYMBOLS[state.currency] || state.currency;
         }
         await fetchBtcPrice();
@@ -415,6 +564,13 @@ window.addEventListener('DOMContentLoaded', async () => {
             savedSims.forEach(s => {
                 s.startDate = new Date(s.startDate);
                 s.endDate = new Date(s.endDate);
+                // Backward compatibility: add orig values if missing
+                if (!s.origCurrency) {
+                    s.origInvested = s.invested;
+                    s.origDue = s.due;
+                    s.origLiquidationPrice = s.liquidationPrice;
+                    s.origCurrency = state.currency;
+                }
                 state.rawData.push(s);
             });
             
@@ -436,15 +592,19 @@ window.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('mainControlPanel').classList.remove('d-none');
             document.getElementById('dashboard').classList.remove('d-none');
             document.getElementById('statusFilter').disabled = false;
-            
+
             // --- ODOMKNUTIE TLAČIDLA PLÁNOVAČA ---
             document.getElementById('btnOpenSimulation').removeAttribute('disabled');
             document.getElementById('btnOpenAnalytics').removeAttribute('disabled');
-            document.getElementById('btnOpenCycle').removeAttribute('disabled'); 
-            
+            document.getElementById('btnOpenCycle').removeAttribute('disabled');
+
             document.getElementById('stressPlaceholder').classList.add('d-none');
             document.getElementById('stressPanel').classList.remove('d-none');
-            
+
+            // Sync currency switcher
+            const currencySelect = document.getElementById('currencySelect');
+            if (currencySelect) currencySelect.value = state.currency;
+
             recalculateBaseData();
             refreshDashboard();
         }
@@ -484,14 +644,87 @@ document.querySelectorAll('th.sortable').forEach(th => {
     });
 });
 
-function parseSlovakDate(dateStr) {
+function parseDate(dateStr, isAmericanFormat = false) {
     if (!dateStr) return null;
-    const parts = dateStr.split('.');
-    if (parts.length === 3) {
-        const dt = new Date(parts[2].trim(), parts[1].trim() - 1, parts[0].trim());
+    let str = dateStr.toString().trim();
+
+    // Remove trailing dot if present (e.g. "15.01.2024.")
+    if (str.endsWith('.')) str = str.slice(0, -1);
+    
+    // Remove any extra text after the date (e.g. "15.01.2024 12:00" or "15.01.2024 (some note)")
+    str = str.split(' ')[0];
+
+    // --- 1. ISO format: yyyy-mm-dd or yyyy/mm/dd ---
+    const isoMatch = str.match(/^(\d{4})[\-/](\d{1,2})[\-/](\d{1,2})$/);
+    if (isoMatch) {
+        const dt = new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]));
         return isNaN(dt.getTime()) ? null : dt;
     }
-    return null;
+
+    // --- 2. European dot format: dd.mm.yyyy or dd. mm. yyyy or d.m.yyyy ---
+    const dotMatch = str.match(/^(\d{1,2})\s*\.\s*(\d{1,2})\s*\.\s*(\d{4})$/);
+    if (dotMatch) {
+        const day = parseInt(dotMatch[1], 10);
+        const month = parseInt(dotMatch[2], 10);
+        const year = parseInt(dotMatch[3], 10);
+        if (!isNaN(day) && !isNaN(month) && !isNaN(year) && year > 2000 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+            const dt = new Date(year, month - 1, day);
+            return isNaN(dt.getTime()) ? null : dt;
+        }
+    }
+
+    // --- 3. Slash format: mm/dd/yyyy (American) or dd/mm/yyyy (European) ---
+    const slashMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (slashMatch) {
+        let month = parseInt(slashMatch[1], 10);
+        let day = parseInt(slashMatch[2], 10);
+        const year = parseInt(slashMatch[3], 10);
+        
+        // If American format, swap month and day
+        if (isAmericanFormat) {
+            [month, day] = [day, month];
+        }
+        
+        if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+            const dt = new Date(year, month - 1, day);
+            return isNaN(dt.getTime()) ? null : dt;
+        }
+    }
+
+    // --- 4. Dash format: dd-mm-yyyy or d-m-yyyy ---
+    const dashMatch = str.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+    if (dashMatch) {
+        const day = parseInt(dashMatch[1], 10);
+        const month = parseInt(dashMatch[2], 10);
+        const year = parseInt(dashMatch[3], 10);
+        if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+            const dt = new Date(year, month - 1, day);
+            return isNaN(dt.getTime()) ? null : dt;
+        }
+    }
+
+    // --- 5. Let JavaScript try to parse it natively ---
+    const dt = new Date(str);
+    return isNaN(dt.getTime()) ? null : dt;
+}
+
+// Try multiple possible column names to find a value in a CSV row
+function getRowValue(row, possibleKeys) {
+    for (const key of possibleKeys) {
+        if (row[key] !== undefined && row[key] !== null && row[key] !== '') {
+            return row[key];
+        }
+    }
+    return undefined;
+}
+
+function getRowValueAndKey(row, possibleKeys) {
+    for (const key of possibleKeys) {
+        if (row[key] !== undefined && row[key] !== null && row[key] !== '') {
+            return { value: row[key], key: key };
+        }
+    }
+    return { value: undefined, key: null };
 }
 
 function parseRawData(data) {
@@ -499,16 +732,19 @@ function parseRawData(data) {
     const parsed = [];
 
     for (let row of data) {
-        let invested = parseNum(row['Investment amount'] || row['Loan amount']);
-        if (invested <= 0) continue;
+        const origInvested = parseNum(row['Investment amount'] || row['Loan amount']);
+        if (origInvested <= 0) continue;
 
-        let due = parseNum(row['Amount due']);
+        const origDue = parseNum(row['Amount due']);
         const rate = parseNum(row['Interest rate (% p.a.)']);
         const collateralBtc = parseNum(row['Collateral sum (BTC)']);
-        let liquidationPrice = parseNum(row['Liquidation price']);
+        const origLiquidationPrice = parseNum(row['Liquidation price']);
         const status = (row['Status'] || 'UNKNOWN').toUpperCase();
 
         const rowCurrency = (row['Currency'] || state.currency).toUpperCase().trim();
+        let invested = origInvested;
+        let due = origDue;
+        let liquidationPrice = origLiquidationPrice;
         if (rowCurrency !== state.currency) {
             invested = convertCurrency(invested, rowCurrency, state.currency);
             due = convertCurrency(due, rowCurrency, state.currency);
@@ -517,8 +753,25 @@ function parseRawData(data) {
             }
         }
 
-        const startDate = parseSlovakDate(row['Start date (dd. mm. yyyy)']);
-        const endDate = parseSlovakDate(row['Maturity date (dd. mm. yyyy)']);
+        // Try multiple possible column names for dates (Firefish may change CSV export format)
+        const startInfo = getRowValueAndKey(row, [
+            'Start date (mm/dd/yyyy)', 'Start date (dd. mm. yyyy)', 'Start date', 'startDate', 'Start Date',
+            'Datum začátku', 'Zahájení', 'Zahajeni', 'Start'
+        ]);
+        const endInfo = getRowValueAndKey(row, [
+            'Maturity date (mm/dd/yyyy)', 'Maturity date (dd. mm. yyyy)', 'Maturity date', 'maturityDate', 'Maturity Date',
+            'End date', 'End Date', 'Datum splatnosti', 'Splatnost'
+        ]);
+        
+        const startDateRaw = startInfo.value;
+        const endDateRaw = endInfo.value;
+        
+        // Detect format from column name: mm/dd/yyyy = American, dd. mm. yyyy = European
+        const isAmericanFormat = (startInfo.key && startInfo.key.includes('mm/dd')) || 
+                                  (endInfo.key && endInfo.key.includes('mm/dd'));
+        
+        const startDate = parseDate(startDateRaw, isAmericanFormat);
+        const endDate = parseDate(endDateRaw, isAmericanFormat);
 
         const investorId = row['Investor id'] || 'Neznámy';
         const borrowerId = row['Borrower id'] || 'Neznámy';
@@ -540,6 +793,10 @@ function parseRawData(data) {
                 annualYield = (profit / invested) * (365 / totalDays) * 100;
             }
         }
+        // Fallback: if calculation fails (e.g. dates missing), use the nominal rate from CSV
+        if (annualYield === 0 && rate > 0) {
+            annualYield = rate;
+        }
 
         let progressPct = 0; let remainingDays = 0;
         if (startDate && endDate) {
@@ -556,13 +813,14 @@ function parseRawData(data) {
             const m = (endDate.getMonth() + 1).toString().padStart(2, '0');
             cashflowMonth = `${endDate.getFullYear()}-${m}`;
         }
-
+        
         parsed.push({
             id: row['Investment id'] || row['Loan id'] || 'N/A', invested, due, rate, status, profit,
             isClosed, isActive, cashflowMonth, liquidationPrice, collateralBtc, annualYield, ltv, distancePct,
-            investorId, borrowerId, role, 
+            investorId, borrowerId, role,
             startDate, endDate, progressPct, remainingDays,
-            rawMaturity: row['Maturity date (dd. mm. yyyy)']
+            rawMaturity: endDateRaw || (endDate ? endDate.toLocaleDateString(currentLang === 'sk' ? 'sk-SK' : 'en-US') : '-'),
+            origInvested, origDue, origLiquidationPrice, origCurrency: rowCurrency
         });
     }
     return parsed;
@@ -670,15 +928,15 @@ function updateKPIs(m) {
     const isInv = state.currentRoleView === 'investor';
     const sign = isInv ? '+' : '-'; 
 
-    document.getElementById('kpiTotalValue').innerText = (m.invested + (isInv ? m.accruedProfit : 0)).toLocaleString('sk-SK', {maximumFractionDigits: 0}) + ` ${state.currencySymbol}`;
+    document.getElementById('kpiTotalValue').innerText = fmtMoney(m.invested + (isInv ? m.accruedProfit : 0)) + ` ${state.currencySymbol}`;
     document.getElementById('kpiLoanCount').innerText = `${m.activeCount} ${t('kpi_active')}`;
-    document.getElementById('kpiNearestLiq').innerText = m.nearestLiqPrice > 0 ? `${m.nearestLiqPrice.toLocaleString('sk-SK', {maximumFractionDigits: 0})} ${state.currencySymbol}` : t('kpi_no_risk');
-    document.getElementById('kpiInvested').innerText = m.invested.toLocaleString('sk-SK') + ` ${state.currencySymbol}`;
-    document.getElementById('kpiAvgApr').innerText = m.avgApr.toFixed(1) + '%';
-    
-    document.getElementById('kpiExpectedProfit').innerText = `${sign}${m.expectedProfit.toLocaleString('sk-SK')} ${state.currencySymbol}`;
-    document.getElementById('kpiRealizedProfit').innerText = `${sign}${m.realizedProfit.toLocaleString('sk-SK')} ${state.currencySymbol}`;
-    document.getElementById('kpiAccruedProfit').innerText = `${sign}${m.accruedProfit.toLocaleString('sk-SK', {maximumFractionDigits: 0})} ${state.currencySymbol}`;
+    document.getElementById('kpiNearestLiq').innerText = m.nearestLiqPrice > 0 ? `${fmtMoney(m.nearestLiqPrice)} ${state.currencySymbol}` : t('kpi_no_risk');
+    document.getElementById('kpiInvested').innerText = fmtMoney(m.invested) + ` ${state.currencySymbol}`;
+    document.getElementById('kpiAvgApr').innerText = fmtPct(m.avgApr) + '%';
+
+    document.getElementById('kpiExpectedProfit').innerText = `${sign}${fmtMoney(m.expectedProfit)} ${state.currencySymbol}`;
+    document.getElementById('kpiRealizedProfit').innerText = `${sign}${fmtMoney(m.realizedProfit)} ${state.currencySymbol}`;
+    document.getElementById('kpiAccruedProfit').innerText = `${sign}${fmtMoney(m.accruedProfit)} ${state.currencySymbol}`;
 
     
 
@@ -693,7 +951,7 @@ function updateKPIs(m) {
     } else {
         let html = '';
         top3.forEach(d => {
-            const amountFmt = d.due.toLocaleString('sk-SK', {maximumFractionDigits: 0}) + ` ${state.currencySymbol}`;
+            const amountFmt = fmtMoney(d.due) + ` ${state.currencySymbol}`;
             const daysText = d.remainingDays > 0 ? `${d.remainingDays} ${t('tbl_days')}` : t('tbl_due');
             html += `
                 <div class="d-flex justify-content-between align-items-center mb-1">
@@ -727,7 +985,7 @@ function updateKPIs(m) {
     } else {
         let htmlLatest = '';
         latest3.forEach(d => {
-            const amountFmt = d.invested.toLocaleString('sk-SK', {maximumFractionDigits: 0}) + ` ${state.currencySymbol}`;
+            const amountFmt = fmtMoney(d.invested) + ` ${state.currencySymbol}`;
             // Formátujeme dátum vytvorenia do pekného tvaru
             const dateFmt = d.startDate.toLocaleDateString(currentLang === 'sk' ? 'sk-SK' : 'en-US');
             
@@ -746,8 +1004,8 @@ function updateKPIs(m) {
     const riskDomPct = document.getElementById('kpiAtRiskPct');
     const riskCard = document.getElementById('kpiRiskCard');
 
-    riskDomEur.innerText = m.capitalAtRisk.toLocaleString('sk-SK') + ` ${state.currencySymbol}`;
-    riskDomPct.innerText = `${m.riskCapitalPct.toFixed(1)} ${t('kpi_risk_pct')}`;
+    riskDomEur.innerText = fmtMoney(m.capitalAtRisk) + ` ${state.currencySymbol}`;
+    riskDomPct.innerText = `${fmtPct(m.riskCapitalPct)} ${t('kpi_risk_pct')}`;
     riskDomEur.className = 'kpi-value ' + (m.capitalAtRisk === 0 ? 'text-success' : 'text-danger');
     riskDomPct.className = m.capitalAtRisk === 0 ? 'text-success fw-bold' : 'text-danger fw-bold';
 
@@ -759,7 +1017,7 @@ function updateKPIs(m) {
     
     const ltvDom = document.getElementById('kpiLtv');
     
-    ltvDom.innerText = m.avgLtv.toFixed(1) + ' %';
+    ltvDom.innerText = fmtPct(m.avgLtv) + ' %';
     ltvDom.className = 'kpi-value ' + (m.avgLtv < RISK_THRESHOLDS.LTV_MEDIUM ? 'text-success' : (m.avgLtv < RISK_THRESHOLDS.LTV_HIGH ? 'text-warning' : 'text-danger'));
 
     
@@ -769,10 +1027,10 @@ function updateKPIs(m) {
 
     if (m.totalBtcCollateral > 0) {
         const btcValueVal = m.totalBtcCollateral * state.currentBtcPrice;
-        btcValue.innerText = `${m.totalBtcCollateral.toFixed(4)} BTC`;
-        btcValueEur.innerText = `${btcValueVal.toLocaleString('sk-SK', {maximumFractionDigits: 0})} ${state.currencySymbol}`;
+        btcValue.innerText = `${fmtBtc(m.totalBtcCollateral)} BTC`;
+        btcValueEur.innerText = `${fmtMoney(btcValueVal)} ${state.currencySymbol}`;
     } else {
-        btcValue.innerText = `0.0000 BTC`;
+        btcValue.innerText = `${fmtBtc(0)} BTC`;
         btcValueEur.innerText = `0 ${state.currencySymbol}`;
     }
 
@@ -793,16 +1051,16 @@ function updateKPIs(m) {
     } else {
         let htmlLiq = '';
         top3Liq.forEach(d => {
-            const liqPriceFmt = d.liquidationPrice.toLocaleString('sk-SK', {maximumFractionDigits: 0}) + ` ${state.currencySymbol}`;
-            
+            const liqPriceFmt = fmtMoney(d.liquidationPrice) + ` ${state.currencySymbol}`;
+
             // Logika pre farbu odznaku podľa toho, ako blízko je likvidácia
             let distColorClass = 'bg-success-subtle text-success-emphasis border-success-subtle';
             if (d.distancePct < RISK_THRESHOLDS.DIST_WARNING) distColorClass = 'bg-warning-subtle text-warning-emphasis border-warning-subtle';
             if (d.distancePct < RISK_THRESHOLDS.DIST_CRITICAL) distColorClass = 'bg-danger-subtle text-danger-emphasis border-danger-subtle';
             if (d.distancePct < 0) distColorClass = 'bg-dark text-danger fw-bold border-dark'; // Ak už padol pod likvidáciu
-            
+
             const gapLabel = t('tbl_gap') || 'Medzera';
-            const gapHtml = `${gapLabel} ${d.distancePct.toFixed(1)}%`;
+            const gapHtml = `${gapLabel} ${fmtPct(d.distancePct)}%`;
             
             htmlLiq += `
                 <div class="d-flex justify-content-between align-items-center mb-1">
@@ -827,12 +1085,12 @@ function updateKPIs(m) {
     } else {
         let htmlCol = '';
         top3Col.forEach(d => {
-            const valFmt = (d.collateralBtc * state.currentBtcPrice).toLocaleString('sk-SK', {maximumFractionDigits: 0}) + ` ${state.currencySymbol}`;
-            
+            const valFmt = fmtMoney(d.collateralBtc * state.currentBtcPrice) + ` ${state.currencySymbol}`;
+
             htmlCol += `
                 <div class="d-flex justify-content-between align-items-center mb-1">
                     <span class="text-secondary fw-bold">${d.id}</span>
-                    <span class="text-dark fw-bold"><i class="bi bi-currency-bitcoin text-warning"></i>${d.collateralBtc.toFixed(4)}</span>
+                    <span class="text-dark fw-bold"><i class="bi bi-currency-bitcoin text-warning"></i>${fmtBtc(d.collateralBtc)}</span>
                     <span class="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle shadow-sm">${valFmt}</span>
                 </div>
             `;
@@ -858,7 +1116,7 @@ function updateAIInsight(m) {
         aiMessage.innerHTML = t('ai_no_data');
         aiIcon.classList.add('bi-robot', 'text-secondary');
     } else if (isStressed && m.capitalAtRisk > 0) {
-        const stressedPrice = (state.currentBtcPrice * (1 + stressPct / 100)).toLocaleString('sk-SK', {maximumFractionDigits: 0});
+        const stressedPrice = fmtMoney(state.currentBtcPrice * (1 + stressPct / 100));
         
         // --- ZÁCHRANNÉ KOLESO PRE OBOCH (INVESTOR AJ DLŽNÍK) ---
         if (state.displayData.length > 0) {
@@ -882,7 +1140,7 @@ function updateAIInsight(m) {
                     // Text sa mení podľa toho, či to pozerá investor alebo dlžník
                     const actionText = isInv ? '<span class="text-muted text-micro">Dlžník musí doložiť:</span> ' : '+';
                     
-                    riskyLoansDetails.push(`Zmluva <span class="fw-bold">${item.id}</span>: ${actionText}<strong>${toAddForThisLoan.toFixed(4)} BTC</strong>`);
+                    riskyLoansDetails.push(`Zmluva <span class="fw-bold">${item.id}</span>: ${actionText}<strong>${fmtBtc(toAddForThisLoan)} BTC</strong>`);
                 }
             });
 
@@ -924,14 +1182,14 @@ function updateAIInsight(m) {
         }
         // --- KONIEC ZÁCHRANNÉHO KOLESA ---
 
-        aiMessage.innerHTML = `${t('ai_stress_warn1')} ${stressPct}% → ${stressedPrice} ${state.currencySymbol}): <strong>${m.capitalAtRisk.toLocaleString('sk-SK')} ${state.currencySymbol}</strong> ${t('ai_stress_warn2')} ${RISK_THRESHOLDS.LTV_HIGH}%). ${t('ai_stress_warn3')} ${m.riskCapitalPct.toFixed(1)}% ${isInv ? t('ai_inv') : t('ai_bor')}.`;
+        aiMessage.innerHTML = `${t('ai_stress_warn1')} ${stressPct}% → ${stressedPrice} ${state.currencySymbol}): <strong>${fmtMoney(m.capitalAtRisk)} ${state.currencySymbol}</strong> ${t('ai_stress_warn2')} ${RISK_THRESHOLDS.LTV_HIGH}%). ${t('ai_stress_warn3')} ${fmtPct(m.riskCapitalPct)}% ${isInv ? t('ai_inv') : t('ai_bor')}.`;
         insightBox.classList.add('danger');
         aiIcon.classList.add('bi-exclamation-triangle-fill', 'text-danger');
     } else if (isStressed && m.capitalAtRisk === 0) {
-        aiMessage.innerHTML = `${t('ai_stress_safe')} ${m.avgLtv.toFixed(1)}%.`;
+        aiMessage.innerHTML = `${t('ai_stress_safe')} ${fmtPct(m.avgLtv)}%.`;
         aiIcon.classList.add('bi-shield-check-fill', 'text-success');
     } else if (m.riskCapitalPct > RISK_THRESHOLDS.PORTFOLIO_RISK_WARN) {
-        aiMessage.innerHTML = `${t('ai_info1')} ${m.capitalAtRisk.toLocaleString('sk-SK')} ${state.currencySymbol} ${t('ai_info2')} (LTV > ${RISK_THRESHOLDS.LTV_HIGH}%). ${isInv ? t('ai_expect_inv') : t('ai_expect_bor')}`;
+        aiMessage.innerHTML = `${t('ai_info1')} ${fmtMoney(m.capitalAtRisk)} ${state.currencySymbol} ${t('ai_info2')} (LTV > ${RISK_THRESHOLDS.LTV_HIGH}%). ${isInv ? t('ai_expect_inv') : t('ai_expect_bor')}`;
         insightBox.classList.add('warning');
         aiIcon.classList.add('bi-info-circle-fill', 'text-warning');
     } else {
@@ -948,19 +1206,19 @@ function updateAIInsight(m) {
             const ltv = m.riskiestLoan.ltv;
 
             if (ltv >= 86) {
-                extraInfo = `<span class="text-danger">Kritický stav!</span> ${t('ai_risk_pos')} (<strong>${m.riskiestLoan.id}</strong>) prekročila <strong>Margin Call 3</strong> (LTV ${ltv.toFixed(1)}%). Likvidácia je extrémne blízko!`;
+                extraInfo = `<span class="text-danger">Kritický stav!</span> ${t('ai_risk_pos')} (<strong>${m.riskiestLoan.id}</strong>) prekročila <strong>Margin Call 3</strong> (LTV ${fmtPct(ltv)}%). Likvidácia je extrémne blízko!`;
             } else if (ltv >= 79) {
-                extraInfo = `Vážne varovanie! ${t('ai_risk_pos')} (<strong>${m.riskiestLoan.id}</strong>) je v zóne <strong>Margin Call 2</strong> (LTV ${ltv.toFixed(1)}%).`;
+                extraInfo = `Vážne varovanie! ${t('ai_risk_pos')} (<strong>${m.riskiestLoan.id}</strong>) je v zóne <strong>Margin Call 2</strong> (LTV ${fmtPct(ltv)}%).`;
             } else if (ltv >= 73) {
                 // Zachovaný tvoj prekladový kľúč z minulosti s defaultným textom ako zálohou
-                extraInfo = `Pozor, ${t('ai_risk_pos').toLowerCase()} (<strong>${m.riskiestLoan.id}</strong>) ${t('ai_mc_zone') || `je v zóne Margin Call 1 (LTV ${ltv.toFixed(1)}%).`}`;
+                extraInfo = `Pozor, ${t('ai_risk_pos').toLowerCase()} (<strong>${m.riskiestLoan.id}</strong>) ${t('ai_mc_zone') || `je v zóne Margin Call 1 (LTV ${fmtPct(ltv)}%).`}`;
             } else if (dropRequired > 0 && dropRequired < 100) {
-                extraInfo = `${t('ai_risk_pos')} (<strong>${m.riskiestLoan.id}</strong>) má LTV ${ltv.toFixed(1)}%. ${t('ai_if_drop')} <strong>${dropRequired.toFixed(1)}%</strong>, ${t('ai_mc1')}`;
+                extraInfo = `${t('ai_risk_pos')} (<strong>${m.riskiestLoan.id}</strong>) má LTV ${fmtPct(ltv)}%. ${t('ai_if_drop')} <strong>${fmtPct(dropRequired)}%</strong>, ${t('ai_mc1')}`;
             }
-            
+
             aiMessage.innerHTML = `${t('ai_ok')} ${extraInfo}`;
         } else {
-            aiMessage.innerHTML = `${t('ai_ok')} (LTV ${m.avgLtv.toFixed(1)}%). ${t('ai_no_liq')}`;
+            aiMessage.innerHTML = `${t('ai_ok')} (LTV ${fmtPct(m.avgLtv)}%). ${t('ai_no_liq')}`;
         }
         aiIcon.classList.add('bi-check-circle-fill', 'text-success');
     }
@@ -999,18 +1257,18 @@ function renderTable() {
         if (d.distancePct < 0) distColor = 'text-danger fw-bold bg-dark px-1 rounded';
 
         let distText = (d.isActive && d.liquidationPrice > 0)
-            ? `<div class="mt-1 text-micro">${t('tbl_gap')} <span class="fw-bold ${distColor}">${d.distancePct.toFixed(1)}%</span></div>`
+            ? `<div class="mt-1 text-micro">${t('tbl_gap')} <span class="fw-bold ${distColor}">${fmtPct(d.distancePct)}%</span></div>`
             : '';
-            
+
         // --- VYKRESLENIE CHI ---
         let chiColor = 'text-success';
         if (d.chiPct < 50) chiColor = 'text-warning';
         if (d.chiPct < 20) chiColor = 'text-danger';
-        
+
         let chiText = (d.isActive && d.collateralBtc > 0 && typeof d.chiPct !== 'undefined')
             ? `<div class="text-micro mt-1" title="Collateral Health Index">
-                 <i class="bi bi-shield-check ${chiColor}"></i> 
-                 <span class="fw-bold">CHI: ${d.chiPct.toFixed(0)}%</span>
+                 <i class="bi bi-shield-check ${chiColor}"></i>
+                 <span class="fw-bold">CHI: ${fmtPct(d.chiPct)}%</span>
                </div>`
             : '';
 
@@ -1030,10 +1288,10 @@ function renderTable() {
             tr.className = d.distancePct < 0 ? 'table-dark' : 'table-danger';
         }
 
-        const investedFmt = d.invested.toLocaleString('sk-SK');
-        const profitFmt = d.profit.toLocaleString('sk-SK');
-        const colBtcFmt = d.collateralBtc > 0 ? `${d.collateralBtc.toFixed(4)} BTC` : '-';
-        const colValFmt = d.collateralBtc > 0 ? `${(d.collateralBtc * state.currentBtcPrice).toLocaleString('sk-SK', {maximumFractionDigits: 0})} ${state.currencySymbol}` : '';
+        const investedFmt = fmtMoney(d.invested);
+        const profitFmt = fmtMoney(d.profit);
+        const colBtcFmt = d.collateralBtc > 0 ? `${fmtBtc(d.collateralBtc)} BTC` : '-';
+        const colValFmt = d.collateralBtc > 0 ? `${fmtMoney(d.collateralBtc * state.currentBtcPrice)} ${state.currencySymbol}` : '';
         const startDateFmt = d.startDate ? d.startDate.toLocaleDateString(currentLang === 'sk' ? 'sk-SK' : 'en-US') : '-';
         const endDateFmt = d.endDate ? d.endDate.toLocaleDateString(currentLang === 'sk' ? 'sk-SK' : 'en-US') : '-';
 
@@ -1043,7 +1301,7 @@ function renderTable() {
             </td>
             <td data-label="Splatnosť"><span class="fw-bold">${d.rawMaturity || '-'}</span></td>
             <td data-label="Reálny Úrok">
-                <div class="fw-bold">${d.annualYield.toFixed(1)} % <span class="text-micro text-muted">p.a.</span></div>
+                <div class="fw-bold">${fmtPct(d.annualYield)} % <span class="text-micro text-muted">p.a.</span></div>
             </td>
             <td data-label="Investícia / Zisk">
                 <div>${investedFmt} ${state.currencySymbol}</div>
@@ -1054,7 +1312,7 @@ function renderTable() {
                 <small class="text-muted">${colValFmt}</small>
             </td>
             <td data-label="Riziko / Medzera">
-                <div class="mb-1"><span class="badge ${ltvClass}">${ltvLabel} (${d.ltv.toFixed(1)}%)</span></div>
+                <div class="mb-1"><span class="badge ${ltvClass}">${ltvLabel} (${fmtPct(d.ltv)}%)</span></div>
                 ${miniLtvBar}
                 ${distText}
                 ${chiText}
@@ -1062,7 +1320,7 @@ function renderTable() {
             <td data-label="Priebeh">
                 <div class="d-flex flex-column" style="min-width: 180px; width: 100%;">
                     <div class="d-flex justify-content-between days-left mb-1 w-100">
-                        <span class="fw-bold text-dark">${d.progressPct.toFixed(0)}%</span>
+                        <span class="fw-bold text-dark">${fmtPct(d.progressPct)}%</span>
                         <span>${daysText}</span>
                     </div>
                     <div class="progress progress-container bg-body-secondary w-100" style="height: 8px;">
@@ -1115,17 +1373,32 @@ function renderCharts() {
     });
 
     const cfLabels = Object.keys(objPrincipal).sort();
-    state.charts.cashflow = new Chart(document.getElementById('cashflowChart'), {
-        type: 'bar',
-        data: {
-            labels: cfLabels,
-            datasets: [
-                { label: (isInv ? t('chart_ret_prin') : t('chart_pay_prin')).replace('€', state.currencySymbol), data: cfLabels.map(l => objPrincipal[l]), backgroundColor: isDark ? '#343a40' : '#e9ecef' },
-                { label: (isInv ? t('chart_net_prof') : t('chart_pay_int')).replace('€', state.currencySymbol), data: cfLabels.map(l => objProfit[l]), backgroundColor: isInv ? '#20c997' : '#dc3545' }
-            ]
-        },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: textColor } } }, scales: { x: { stacked: true, ...commonScales.x }, y: { stacked: true, ...commonScales.y } } }
-    });
+    
+    // Safe wrapper access
+    const cashflowChart = document.getElementById('cashflowChart');
+    const cashflowWrapper = cashflowChart ? cashflowChart.parentElement : null;
+    
+    if (cfLabels.length === 0) {
+        // Don't destroy the canvas, just skip rendering
+    } else if (cashflowChart) {
+        try {
+            state.charts.cashflow = new Chart(cashflowChart, {
+                type: 'bar',
+                data: {
+                    labels: cfLabels,
+                    datasets: [
+                        { label: (isInv ? t('chart_ret_prin') : t('chart_pay_prin')).replace('€', state.currencySymbol), data: cfLabels.map(l => objPrincipal[l]), backgroundColor: isDark ? '#343a40' : '#e9ecef' },
+                        { label: (isInv ? t('chart_net_prof') : t('chart_pay_int')).replace('€', state.currencySymbol), data: cfLabels.map(l => objProfit[l]), backgroundColor: isInv ? '#20c997' : '#dc3545' }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: textColor } } }, scales: { x: { stacked: true, ...commonScales.x }, y: { stacked: true, ...commonScales.y } } }
+            });
+        } catch (e) {
+            console.error('Chart.js error (cashflow):', e);
+        }
+    } else {
+        console.error('cashflowChart canvas not found in DOM');
+    }
 
     activeRiskLoans.sort((a, b) => a.distance - b.distance);
     
@@ -1213,7 +1486,7 @@ function updateStressUI(pct) {
         const colorClass = pct > -20 ? 'bg-warning text-dark' : (pct > -40 ? 'bg-danger' : 'bg-dark text-white');
         stressLabel.className = 'badge shadow-sm ' + colorClass;
         stressLabel.innerText = `Stres ${pct}%`;
-        stressBtcPrice.innerHTML = `${t('stress_sim_price')} <strong>${stressedPrice.toLocaleString('sk-SK', {maximumFractionDigits: 0})} ${state.currencySymbol}</strong>`;
+        stressBtcPrice.innerHTML = `${t('stress_sim_price')} <strong>${fmtMoney(stressedPrice)} ${state.currencySymbol}</strong>`;
     }
 }
 
@@ -1235,38 +1508,40 @@ document.getElementById('btnSaveSimulation').addEventListener('click', async fun
     const simRoleEl = document.querySelector('input[name="simRole"]:checked');
     const role = simRoleEl ? simRoleEl.value : state.currentRoleView;
 
-    if (!state.hasImportedData) {
-        const selectedCurr = document.getElementById('simCurrencySelect').value;
-        if (state.currency !== selectedCurr) {
-            state.currency = selectedCurr;
-            state.currencySymbol = CURRENCY_SYMBOLS[state.currency] || state.currency;
-            localStorage.setItem('firefish_simulated_currency', state.currency);
-            await fetchBtcPrice(); 
-        }
-    }
+    const simCurrency = document.getElementById('simCurrencySelect').value || state.currency;
 
-    const profit = amount * (rate / 100) * (months / 12);
-    const due = amount + profit;
+    // Calculate in simCurrency
+    const simProfit = amount * (rate / 100) * (months / 12);
+    const simDue = amount + simProfit;
     const today = new Date();
     const endDate = new Date(today); endDate.setMonth(endDate.getMonth() + months);
 
     const invId = role === 'investor' ? (state.myId || 'JA') : t('sim_lender');
     const borId = role === 'borrower' ? (state.myId || 'JA') : t('sim_borrower');
 
-    const calculatedCollateral = (state.currentBtcPrice > 0) ? ((due / 0.50) / state.currentBtcPrice) : 0;
-    const calculatedLiqPrice = (calculatedCollateral > 0) ? (due / (calculatedCollateral * 0.95)) : 0;
+    // Convert to display currency for BTC collateral calculation
+    const dueInDisplay = convertCurrency(simDue, simCurrency, state.currency);
+    const calculatedCollateral = (state.currentBtcPrice > 0) ? ((dueInDisplay / 0.50) / state.currentBtcPrice) : 0;
+    const calculatedLiqPrice = (calculatedCollateral > 0) ? (dueInDisplay / (calculatedCollateral * 0.95)) : 0;
+
+    // Values stored in display currency
+    const displayInvested = convertCurrency(amount, simCurrency, state.currency);
+    const displayDue = convertCurrency(simDue, simCurrency, state.currency);
 
     const simLoan = {
-        id: 'SIM-' + Math.floor(Math.random() * 10000), 
-        invested: amount, due: due, rate: rate, status: 'ACTIVE', profit: profit,
+        id: 'SIM-' + Math.floor(Math.random() * 10000),
+        invested: displayInvested, due: displayDue, rate: rate, status: 'ACTIVE', profit: displayDue - displayInvested,
         isClosed: false, isActive: true, cashflowMonth: `${endDate.getFullYear()}-${(endDate.getMonth() + 1).toString().padStart(2, '0')}`,
-        liquidationPrice: calculatedLiqPrice, 
-        collateralBtc: calculatedCollateral, 
+        liquidationPrice: calculatedLiqPrice,
+        collateralBtc: calculatedCollateral,
         annualYield: rate, ltv: 50, distancePct: 0,
         investorId: invId, borrowerId: borId, role: role,
-        startDate: today, endDate: endDate, progressPct: 0, 
+        startDate: today, endDate: endDate, progressPct: 0,
         remainingDays: Math.ceil((endDate - today) / (1000 * 60 * 60 * 24)),
-        rawMaturity: endDate.toLocaleDateString(currentLang === 'sk' ? 'sk-SK' : 'en-US'), isSimulated: true
+        rawMaturity: endDate.toLocaleDateString(currentLang === 'sk' ? 'sk-SK' : 'en-US'), isSimulated: true,
+        origInvested: amount, origDue: simDue,
+        origLiquidationPrice: (calculatedCollateral > 0) ? (simDue / (calculatedCollateral * 0.95)) : 0,
+        origCurrency: simCurrency
     };
 
     state.rawData.push(simLoan);

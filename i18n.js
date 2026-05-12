@@ -35,6 +35,7 @@ const translations = {
 
         "chart_cf_title": "Expected Cashflow",
         "chart_cf_sub": "(Plan by maturity)",
+        "chart_cf_empty": "No cashflow data.",
         "chart_liq_title": "Distance to liquidation",
         "chart_liq_sub": "(Safety margin in %)",
         "chart_int_title": "Capital distribution by interest rate (€)",
@@ -269,6 +270,7 @@ const translations = {
 
         "chart_cf_title": "Očakávaný Cashflow",
         "chart_cf_sub": "(Plán podľa splatnosti)",
+        "chart_cf_empty": "Žiadne údaje pre cashflow.",
         "chart_liq_title": "Vzdialenosť k likvidácii",
         "chart_liq_sub": "(Bezpečnostná medzera v %)",
         "chart_int_title": "Rozloženie kapitálu podľa úroku (€)",
@@ -468,7 +470,7 @@ const translations = {
     },
 
     // ------------------- ČEŠTINA -------------------
-    cz: {
+    cs: {
         "app_title": "Firefish EXPLORER",
         "status_online": "Online",
         "status_offline": "Offline",
@@ -503,6 +505,7 @@ const translations = {
 
         "chart_cf_title": "Očekávaný Cashflow",
         "chart_cf_sub": "(Plán podle splatnosti)",
+        "chart_cf_empty": "Žádné údaje pro cashflow.",
         "chart_liq_title": "Vzdálenost k likvidaci",
         "chart_liq_sub": "(Bezpečnostní mezera v %)",
         "chart_int_title": "Rozložení kapitálu podle úroku (€)",
@@ -732,6 +735,7 @@ const translations = {
         "kpi_risk_title": "Kapital nahe der Liquidation",
         "chart_cf_title": "Erwarteter Cashflow",
         "chart_cf_sub": "(Plan nach Fälligkeit)",
+        "chart_cf_empty": "Keine Cashflow-Daten.",
         "chart_liq_title": "Abstand zur Liquidation",
         "chart_liq_sub": "(Sicherheitsmarge in %)",
         "chart_int_title": "Kapitalverteilung nach Zinssatz (€)",
@@ -954,6 +958,7 @@ const translations = {
         "kpi_risk_title": "Kapitał blisko likwidacji",
         "chart_cf_title": "Oczekiwany cashflow",
         "chart_cf_sub": "(Plan według terminów zapadalności)",
+        "chart_cf_empty": "Brak danych cashflow.",
         "chart_liq_title": "Odległość do likwidacji",
         "chart_liq_sub": "(Margines bezpieczeństwa w %)",
         "chart_int_title": "Struktura kapitału według oprocentowania (€)",
@@ -1177,6 +1182,7 @@ const translations = {
         "kpi_risk_title": "Likvidációhoz közeli tőke",
         "chart_cf_title": "Várható cashflow",
         "chart_cf_sub": "(Terv lejárat szerint)",
+        "chart_cf_empty": "Nincs cashflow adat.",
         "chart_liq_title": "Távolság a likvidációtól",
         "chart_liq_sub": "(Biztonsági tartalék %)",
         "chart_int_title": "Tőke eloszlása kamatláb szerint (€)",
@@ -1400,6 +1406,7 @@ const translations = {
         "kpi_risk_title": "Capital cercano a la liquidación",
         "chart_cf_title": "Flujo de caja esperado",
         "chart_cf_sub": "(Plan por vencimiento)",
+        "chart_cf_empty": "Sin datos de flujo de caja.",
         "chart_liq_title": "Distancia a la liquidación",
         "chart_liq_sub": "(Margen de seguridad en %)",
         "chart_int_title": "Distribución de capital por tasa de interés (€)",
@@ -1623,6 +1630,7 @@ const translations = {
         "kpi_risk_title": "Capitale vicino alla liquidazione",
         "chart_cf_title": "Flusso di cassa previsto",
         "chart_cf_sub": "(Piano per scadenza)",
+        "chart_cf_empty": "Nessun dato di cashflow.",
         "chart_liq_title": "Distanza dalla liquidazione",
         "chart_liq_sub": "(Margine di sicurezza in %)",
         "chart_int_title": "Distribuzione del capitale per tasso di interesse (€)",
@@ -2069,6 +2077,7 @@ const translations = {
         "kpi_risk_title": "Kapital nær likvidasjon",
         "chart_cf_title": "Forventet kontantstrøm",
         "chart_cf_sub": "(Plan etter forfall)",
+        "chart_cf_empty": "Ingen kontantstrømdata.",
         "chart_liq_title": "Avstand til likvidasjon",
         "chart_liq_sub": "(Sikkerhetsmargin i %)",
         "chart_int_title": "Kapitalfordeling etter rente (€)",
@@ -2292,6 +2301,7 @@ const translations = {
         "kpi_risk_title": "Capital proche de la liquidation",
         "chart_cf_title": "Flux de trésorerie prévu",
         "chart_cf_sub": "(Plan par échéance)",
+        "chart_cf_empty": "Aucune donnée de flux de trésorerie.",
         "chart_liq_title": "Distance à la liquidation",
         "chart_liq_sub": "(Marge de sécurité en %)",
         "chart_int_title": "Répartition du capital par taux d'intérêt (€)",
