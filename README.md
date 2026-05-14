@@ -67,6 +67,10 @@ You don't need to install anything or set up a server. Choose the method that su
 - Coinbase Public API (only used to fetch the live BTC price)
 - Alternative.me API (used for the Market Compass sentiment index)
 
+## Contributors (Prispievatelia)
+A huge thank you goes to the talented people in the community who helped improve this project:
+* **[Bukowski](https://github.com/bukowski12)** - For finding bugs.
+* **[kaaduu](https://github.com/kaaduu)** - For robust date handling, the name switcher, and improvements to code cleanliness.
 
 *Created by [@satoshi1351](https://github.com/satoshi1351)*
 
