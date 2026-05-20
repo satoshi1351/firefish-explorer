@@ -23,6 +23,17 @@ const state = {
     showDecimals: localStorage.getItem('firefish_show_decimals') === 'true'
 };
 
+// --- BEZPEČNOSŤ: escape textu z CSV pred vložením do innerHTML (ochrana proti XSS) ---
+function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return value.toString()
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 // --- NUMBER FORMATTING HELPERS ---
 function fmtNum(value, decimalsIfOn) {
     const d = state.showDecimals ? decimalsIfOn : 0;
@@ -207,7 +218,11 @@ async function fetchBtcPrice() {
             apiCurrency = 'USD';
         }
         
-        state.currentBtcPrice = parseFloat(state.exchangeRates[apiCurrency]);
+        const fetchedPrice = parseFloat(state.exchangeRates[apiCurrency]);
+        if (!fetchedPrice || isNaN(fetchedPrice) || fetchedPrice <= 0) {
+            throw new Error('Invalid BTC price for currency ' + apiCurrency);
+        }
+        state.currentBtcPrice = fetchedPrice;
         localStorage.setItem(`lastBtcPrice_${state.currency}`, state.currentBtcPrice);
         
         const now = new Date();
@@ -220,9 +235,31 @@ async function fetchBtcPrice() {
         }
 
         const savedPrice = localStorage.getItem(`lastBtcPrice_${state.currency}`);
-        state.currentBtcPrice = savedPrice ? parseFloat(savedPrice) : (state.currency === 'EUR' ? 60000 : 0);
-        priceLabel.innerHTML = `${t('price_err')} <strong>${fmtMoney(state.currentBtcPrice)} ${state.currencySymbol}</strong>`;
+        if (savedPrice && parseFloat(savedPrice) > 0) {
+            state.currentBtcPrice = parseFloat(savedPrice);
+            priceLabel.innerHTML = `${t('price_err')} <strong>${fmtMoney(state.currentBtcPrice)} ${state.currencySymbol}</strong>`;
+        } else {
+            // Žiadna platná cena — nepoužívame zavádzajúcu fixnú hodnotu.
+            // currentBtcPrice = 0 spôsobí, že LTV/CHI/distance sa nepočítajú (zobrazia sa ako neutrálne).
+            state.currentBtcPrice = 0;
+            priceLabel.innerHTML = `<span class="text-warning fw-medium"><i class="bi bi-exclamation-triangle me-1"></i>${t('price_na')}</span>`;
+        }
     }
+}
+
+// Collateral Health Index (0–100 %): kde sa nachádza aktuálna cena medzi
+// počiatočným LTV (50 %) a likvidáciou (95 %). 100 % = počiatočný stav, 0 % = likvidácia.
+// Likvidačnú cenu berie z CSV (d.liquidationPrice) — rovnaký zdroj ako distancePct,
+// aby boli obe metriky konzistentné. Ak v CSV chýba, dopočíta ju z LTV 95 %.
+function computeChi(d, btcPrice) {
+    if (!d.collateralBtc || d.collateralBtc <= 0 || !btcPrice || btcPrice <= 0) return 0;
+    const liqPrice = (d.liquidationPrice > 0)
+        ? d.liquidationPrice
+        : d.due / (d.collateralBtc * 0.95);
+    const initPrice = d.due / (d.collateralBtc * 0.50);
+    if (initPrice <= liqPrice) return 0;
+    const chi = (btcPrice - liqPrice) / (initPrice - liqPrice);
+    return Math.max(0, Math.min(1, chi)) * 100;
 }
 
 function recalculateBaseData() {
@@ -232,12 +269,7 @@ function recalculateBaseData() {
         
         if (d.isActive && d.liquidationPrice > 0 && state.currentBtcPrice > 0) {
             d.distancePct = ((state.currentBtcPrice - d.liquidationPrice) / state.currentBtcPrice) * 100;
-            
-            // --- NOVÝ VÝPOČET CHI ---
-            const liqPrice = d.due / (d.collateralBtc * 0.95);
-            const initPrice = d.due / (d.collateralBtc * 0.50);
-            let chi = (state.currentBtcPrice - liqPrice) / (initPrice - liqPrice);
-            d.chiPct = Math.max(0, Math.min(1, chi)) * 100;
+            d.chiPct = computeChi(d, state.currentBtcPrice);
         } else {
             d.distancePct = 0;
             d.chiPct = 0;
@@ -253,39 +285,42 @@ function refreshDashboard() {
     const stressPct = parseInt(dom.stressSlider.value) || 0;
     const role = state.currentRoleView;
 
-    let filteredData = state.rawData.filter(d => 
-        (filter === 'ALL' || d.status === filter) && d.role === role
-    );
-
-    if (stressPct < 0) {
+    // Stress test transformácia — aplikuje sa rovnako na agregátne metriky aj na tabuľku
+    const applyStress = (arr) => {
+        if (stressPct >= 0) return arr;
         const stressedBtcPrice = state.currentBtcPrice * (1 + stressPct / 100);
-        filteredData = filteredData.map(d => {
+        return arr.map(d => {
             if (!d.isActive || d.collateralBtc <= 0) return { ...d };
             if (stressedBtcPrice <= 0) return { ...d, ltv: 0, distancePct: 0 };
-            
+
             const stressedCollateralValue = d.collateralBtc * stressedBtcPrice;
             const stressedLtv = stressedCollateralValue > 0 ? (d.due / stressedCollateralValue) * 100 : 0;
             const stressedDistance = d.liquidationPrice > 0
                 ? ((stressedBtcPrice - d.liquidationPrice) / stressedBtcPrice) * 100
                 : 0;
-                
-            // --- VÝPOČET CHI PRE STRESS TEST ---
-            const liqPrice = d.due / (d.collateralBtc * 0.95);
-            const initPrice = d.due / (d.collateralBtc * 0.50);
-            let stressedChi = (stressedBtcPrice - liqPrice) / (initPrice - liqPrice);
-            const finalStressedChi = Math.max(0, Math.min(1, stressedChi)) * 100;
+
+            const finalStressedChi = computeChi(d, stressedBtcPrice);
 
             return { ...d, ltv: stressedLtv, distancePct: stressedDistance, chiPct: finalStressedChi };
         });
-    }
+    };
+
+    // Agregátne KPI počítame z CELÉHO portfólia danej roly (nezávisle od filtra statusu),
+    // aby napr. "Realizovaný zisk" nebol 0 len preto, že je zvolený filter "Aktívne".
+    const roleData = applyStress(state.rawData.filter(d => d.role === role));
+
+    // displayData (tabuľka, grafy, zoznamy) naďalej rešpektujú filter statusu.
+    const filteredData = applyStress(
+        state.rawData.filter(d => (filter === 'ALL' || d.status === filter) && d.role === role)
+    );
 
     state.displayData = filteredData;
-    
+
     sortDisplayData();
-    updateDynamicLabels(); 
-    const metrics = calculateMetrics(state.displayData);
+    updateDynamicLabels();
+    const metrics = calculateMetrics(roleData);
     updateKPIs(metrics);
-    updateAIInsight(metrics);
+    updateAIInsight(metrics, roleData);
     renderCharts();
     renderTable();
 }
@@ -298,6 +333,10 @@ setInterval(async () => {
     }
 }, 60000);
 
+// Heuristicky určí ID vlastníka portfólia podľa toho, ktoré ID sa najčastejšie
+// opakuje. POZNÁMKA: pri zmiešanom CSV, kde si používateľ aj investor aj dlžník,
+// môže byť priradenie roly k jednotlivým riadkom nepresné — pri rovnakom počte
+// výskytov sa preferuje investor. Funguje spoľahlivo pre bežný prípad (jedna prevažujúca rola).
 function getMyId(data) {
     const invCounts = {};
     const borCounts = {};
@@ -364,7 +403,10 @@ function parseAndInitApp(csvText) {
             state.rawData = parseRawData(results.data);
 
             const savedSims = JSON.parse(localStorage.getItem('firefish_simulated_loans') || '[]');
+            const existingIds = new Set(state.rawData.map(d => d.id));
             savedSims.forEach(s => {
+                if (existingIds.has(s.id)) return; // ochrana proti duplikátom pri opakovanom importe
+                existingIds.add(s.id);
                 s.startDate = new Date(s.startDate);
                 s.endDate = new Date(s.endDate);
                 // Backward compatibility: add orig values if missing
@@ -775,9 +817,12 @@ function parseRawData(data) {
         const startDate = parseDate(startDateRaw, isAmericanFormat);
         const endDate = parseDate(endDateRaw, isAmericanFormat);
 
-        const investorId = row['Investor id'] || 'Neznámy';
-        const borrowerId = row['Borrower id'] || 'Neznámy';
-        const role = (investorId === state.myId) ? 'investor' : 'borrower';
+        const rawInvestorId = row['Investor id'] || 'Neznámy';
+        const rawBorrowerId = row['Borrower id'] || 'Neznámy';
+        const role = (rawInvestorId === state.myId) ? 'investor' : 'borrower';
+        // Escapnuté verzie pre bezpečné vloženie do innerHTML
+        const investorId = escapeHtml(rawInvestorId);
+        const borrowerId = escapeHtml(rawBorrowerId);
 
         const collateralValue = collateralBtc * state.currentBtcPrice;
         const ltv = collateralValue > 0 ? (due / collateralValue) * 100 : 0;
@@ -828,11 +873,11 @@ function parseRawData(data) {
         }
 
         parsed.push({
-            id: row['Investment id'] || row['Loan id'] || 'N/A', invested, due, rate, status: finalStatus, profit,
+            id: escapeHtml(row['Investment id'] || row['Loan id'] || 'N/A'), invested, due, rate, status: finalStatus, profit,
             isClosed: finalIsClosed, isActive: finalIsActive, cashflowMonth, liquidationPrice, collateralBtc, annualYield, ltv, distancePct,
             investorId, borrowerId, role,
             startDate, endDate, progressPct, remainingDays,
-            rawMaturity: endDateRaw || (endDate ? endDate.toLocaleDateString(currentLang === 'sk' ? 'sk-SK' : 'en-US') : '-'),
+            rawMaturity: escapeHtml(endDateRaw) || (endDate ? endDate.toLocaleDateString(currentLang === 'sk' ? 'sk-SK' : 'en-US') : '-'),
             origInvested, origDue, origLiquidationPrice, origCurrency: rowCurrency
         });
     }
@@ -900,6 +945,8 @@ function calculateMetrics(data) {
             m.totalBtcCollateral += d.collateralBtc;
             
             if (d.liquidationPrice > 0) {
+                // "Najbližšia" likvidácia = najVYŠŠIA likvidačná cena, lebo tá je
+                // najbližšie k aktuálnej trhovej cene BTC (najmenší priestor na pád).
                 if (m.nearestLiqPrice === 0 || d.liquidationPrice > m.nearestLiqPrice) {
                     m.nearestLiqPrice = d.liquidationPrice;
                 }
@@ -1112,12 +1159,15 @@ function updateKPIs(m) {
     }
 }
 
-function updateAIInsight(m) {
+function updateAIInsight(m, insightData) {
     const insightBox = document.getElementById('aiInsightBox');
     const aiMessage = document.getElementById('aiMessage');
     const aiIcon = document.getElementById('aiIcon');
     const isInv = state.currentRoleView === 'investor';
-    
+    // Záchranné koleso pracuje nad rovnakým datasetom ako KPI metriky (celé portfólio roly),
+    // aby AI hlásenie sedelo s číslom "kapitál v riziku" bez ohľadu na filter statusu.
+    const dataForInsight = insightData || state.displayData;
+
     insightBox.classList.remove('d-none', 'danger', 'warning');
     aiIcon.className = 'bi fs-4 me-3 ';
 
@@ -1132,12 +1182,12 @@ function updateAIInsight(m) {
         const stressedPrice = fmtMoney(state.currentBtcPrice * (1 + stressPct / 100));
         
         // --- ZÁCHRANNÉ KOLESO PRE OBOCH (INVESTOR AJ DLŽNÍK) ---
-        if (state.displayData.length > 0) {
+        if (dataForInsight.length > 0) {
             const simPrice = state.currentBtcPrice * (1 + stressPct / 100);
             let riskyLoansDetails = [];
             let liquidatedDetails = [];
 
-            state.displayData.forEach(item => {
+            dataForInsight.forEach(item => {
                 if (!item.isActive || item.collateralBtc <= 0) return;
                 const itemLTV = (item.due / (item.collateralBtc * simPrice)) * 100;
 
