@@ -1313,7 +1313,24 @@ function renderTable() {
     const profitColor = isInv ? 'text-success' : 'text-danger';
     const profitSign = isInv ? '+' : '-';
 
-    state.displayData.forEach(d => {
+    // HISTÓRIA: pri filtri "Aktívne" pripojíme pod aktívne zmluvy aj ukončené (stlmené),
+    // aby Detailný prehľad slúžil aj ako história. Grafy a KPI sa tým nemenia.
+    let tableRows = state.displayData;
+    if (getDom().statusFilter.value === 'ACTIVE') {
+        const shownIds = new Set(state.displayData.map(d => d.id));
+        const history = state.rawData
+            .filter(d => d.role === state.currentRoleView && d.isClosed && !shownIds.has(d.id))
+            .sort((a, b) => {
+                let valA = a[state.sortCol]; let valB = b[state.sortCol];
+                if (state.sortCol === 'endDate') { if (!valA) return 1; if (!valB) return -1; }
+                if (valA < valB) return state.sortAsc ? -1 : 1;
+                if (valA > valB) return state.sortAsc ? 1 : -1;
+                return 0;
+            });
+        tableRows = state.displayData.concat(history);
+    }
+
+    tableRows.forEach(d => {
         let ltvLabel = 'NEZNÁME'; let ltvClass = 'bg-secondary';
         if (d.ltv > 0 && d.ltv < RISK_THRESHOLDS.LTV_MEDIUM) { ltvLabel = 'LOW'; ltvClass = 'bg-success'; }
         else if (d.ltv >= RISK_THRESHOLDS.LTV_MEDIUM && d.ltv < RISK_THRESHOLDS.LTV_HIGH) { ltvLabel = 'MEDIUM'; ltvClass = 'bg-warning text-dark'; }
@@ -1322,7 +1339,7 @@ function renderTable() {
         let statusBadge = d.isActive ? 'bg-success' : (d.isClosed ? 'bg-dark' : 'bg-secondary');
         let statusText = d.status;
         let daysText = d.remainingDays > 0 ? `${t('tbl_days_left')} ${d.remainingDays} ${t('tbl_days')}` : t('tbl_due');
-        if (d.isClosed) daysText = t('tbl_closed');
+        if (d.isClosed) daysText = d.rawClosedAt ? `${t('tbl_closed')} ${d.rawClosedAt}` : t('tbl_closed');
         
         let statusTitle = '';
         if (d.isAwaiting) {
@@ -1376,6 +1393,7 @@ function renderTable() {
         if (d.isActive && d.liquidationPrice > 0 && d.distancePct < RISK_THRESHOLDS.DIST_CRITICAL) {
             tr.className = d.distancePct < 0 ? 'table-dark' : 'table-danger';
         }
+        if (d.isClosed) tr.style.opacity = '0.6'; // ukončené zmluvy = história
 
         const investedFmt = fmtMoney(d.invested);
         const profitFmt = fmtMoney(d.profit);
