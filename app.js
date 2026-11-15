@@ -1345,24 +1345,7 @@ function renderTable() {
     const profitColor = isInv ? 'text-success' : 'text-danger';
     const profitSign = isInv ? '+' : '-';
 
-    // HISTÓRIA: pri filtri "Aktívne" pripojíme pod aktívne zmluvy aj ukončené (stlmené),
-    // aby Detailný prehľad slúžil aj ako história. Grafy a KPI sa tým nemenia.
-    let tableRows = state.displayData;
-    if (getDom().statusFilter.value === 'ACTIVE') {
-        const shownIds = new Set(state.displayData.map(d => d.id));
-        const history = state.rawData
-            .filter(d => d.role === state.currentRoleView && d.isClosed && !shownIds.has(d.id))
-            .sort((a, b) => {
-                let valA = a[state.sortCol]; let valB = b[state.sortCol];
-                if (state.sortCol === 'endDate') { if (!valA) return 1; if (!valB) return -1; }
-                if (valA < valB) return state.sortAsc ? -1 : 1;
-                if (valA > valB) return state.sortAsc ? 1 : -1;
-                return 0;
-            });
-        tableRows = state.displayData.concat(history);
-    }
-
-    tableRows.forEach(d => {
+    state.displayData.forEach(d => {
         let ltvLabel = t('tbl_ltv_unknown'); let ltvClass = 'bg-secondary';
         if (d.ltv > 0 && d.ltv < RISK_THRESHOLDS.LTV_MEDIUM) { ltvLabel = 'LOW'; ltvClass = 'bg-success'; }
         else if (d.ltv >= RISK_THRESHOLDS.LTV_MEDIUM && d.ltv < RISK_THRESHOLDS.LTV_HIGH) { ltvLabel = 'MEDIUM'; ltvClass = 'bg-warning text-dark'; }
