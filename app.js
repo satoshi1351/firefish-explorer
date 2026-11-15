@@ -807,8 +807,14 @@ function parseRawData(data) {
             'End date', 'End Date', 'Datum splatnosti', 'Splatnost'
         ]);
         
+        // Skutočný dátum ukončenia (Firefish ho vypĺňa pri CLOSED, aj pri predčasnom splatení)
+        const closedInfo = getRowValueAndKey(row, [
+            'Closed at (mm/dd/yyyy)', 'Closed at (dd. mm. yyyy)', 'Closed at', 'closedAt', 'Closed At'
+        ]);
+
         const startDateRaw = startInfo.value;
         const endDateRaw = endInfo.value;
+        const closedAtRaw = closedInfo.value;
         
         // Detect format from column name: mm/dd/yyyy = American, dd. mm. yyyy = European
         const isAmericanFormat = (startInfo.key && startInfo.key.includes('mm/dd')) || 
@@ -816,6 +822,7 @@ function parseRawData(data) {
         
         const startDate = parseDate(startDateRaw, isAmericanFormat);
         const endDate = parseDate(endDateRaw, isAmericanFormat);
+        const closedAt = parseDate(closedAtRaw, isAmericanFormat);
 
         const rawInvestorId = row['Investor id'] || 'Neznámy';
         const rawBorrowerId = row['Borrower id'] || 'Neznámy';
@@ -861,22 +868,21 @@ function parseRawData(data) {
             cashflowMonth = `${endDate.getFullYear()}-${m}`;
         }
         
-        // --- NAŠA NOVÁ OPRAVA: AK JE ZMLUVA 100% SPLATENÁ, ZMENÍME JU NA CLOSED ---
-        let finalStatus = status;
-        let finalIsClosed = isClosed;
-        let finalIsActive = isActive;
-        
-        if (progressPct >= 100) {
-            finalStatus = 'CLOSED';
-            finalIsClosed = true;
-            finalIsActive = false;
-        }
+        // Status z CSV je jediný zdroj pravdy — zmluvu už automaticky NEZATVÁRAME.
+        // Ak je po dátume splatnosti a v CSV stále ACTIVE, je v medzistave
+        // "splatná, čaká na potvrdenie": zostáva v aktívnom kapitáli a zisk
+        // ešte nie je realizovaný (treba nahrať čerstvý CSV).
+        const finalStatus = status;
+        const finalIsClosed = isClosed;
+        const finalIsActive = isActive;
+        const isAwaiting = isActive && progressPct >= 100;
 
         parsed.push({
             id: escapeHtml(row['Investment id'] || row['Loan id'] || 'N/A'), invested, due, rate, status: finalStatus, profit,
             isClosed: finalIsClosed, isActive: finalIsActive, cashflowMonth, liquidationPrice, collateralBtc, annualYield, ltv, distancePct,
             investorId, borrowerId, role,
             startDate, endDate, progressPct, remainingDays,
+            isAwaiting, closedAt, rawClosedAt: escapeHtml(closedAtRaw),
             rawMaturity: escapeHtml(endDateRaw) || (endDate ? endDate.toLocaleDateString(currentLang === 'sk' ? 'sk-SK' : 'en-US') : '-'),
             origInvested, origDue, origLiquidationPrice, origCurrency: rowCurrency
         });
@@ -932,13 +938,16 @@ function calculateMetrics(data) {
     let m = {
         invested: 0, expectedProfit: 0, realizedProfit: 0, accruedProfit: 0,
         weightedLtvSum: 0, weightedLtvBase: 0, weightedAprSum: 0, weightedAprBase: 0,
-        capitalAtRisk: 0, otherPartiesData: {},
+        capitalAtRisk: 0, otherPartiesData: {}, historicalInvested: 0,
         totalBtcCollateral: 0, activeCount: 0, nearestLiqPrice: 0, riskiestLoan: null
     };
     
     data.forEach(d => {
-        m.invested += d.invested;
+        // Historický súčet (všetko čo kedy bolo zainvestované, okrem zrušených) — len doplnkový údaj
+        if (d.status !== 'CANCELED') m.historicalInvested += d.invested;
         if (d.isActive) {
+            // Zainvestovaný kapitál = len otvorené zmluvy (splatená istina sa už nepočíta)
+            m.invested += d.invested;
             m.activeCount++;
             m.expectedProfit += d.profit;
             m.accruedProfit += d.profit * (d.progressPct / 100);
@@ -993,6 +1002,16 @@ function updateKPIs(m) {
     document.getElementById('kpiNearestLiq').innerText = m.nearestLiqPrice > 0 ? `${fmtMoney(m.nearestLiqPrice)} ${state.currencySymbol}` : t('kpi_no_risk');
     document.getElementById('kpiInvested').innerText = fmtMoney(m.invested) + ` ${state.currencySymbol}`;
     document.getElementById('kpiAvgApr').innerText = fmtPct(m.avgApr) + '%';
+
+    const histDom = document.getElementById('kpiHistTotal');
+    if (histDom) {
+        if (m.historicalInvested - m.invested > 0.005) {
+            histDom.innerText = `${t('kpi_hist_total')} ${fmtMoney(m.historicalInvested)} ${state.currencySymbol}`;
+            histDom.classList.remove('d-none');
+        } else {
+            histDom.classList.add('d-none');
+        }
+    }
 
     document.getElementById('kpiExpectedProfit').innerText = `${sign}${fmtMoney(m.expectedProfit)} ${state.currencySymbol}`;
     document.getElementById('kpiRealizedProfit').innerText = `${sign}${fmtMoney(m.realizedProfit)} ${state.currencySymbol}`;
@@ -1175,7 +1194,7 @@ function updateAIInsight(m, insightData) {
     const stressPct = parseInt(dom.stressSlider.value);
     const isStressed = stressPct < 0;
 
-    if (m.invested === 0) {
+    if (m.invested === 0 && m.historicalInvested === 0) {
         aiMessage.innerHTML = t('ai_no_data');
         aiIcon.classList.add('bi-robot', 'text-secondary');
     } else if (isStressed && m.capitalAtRisk > 0) {
@@ -1305,6 +1324,13 @@ function renderTable() {
         let daysText = d.remainingDays > 0 ? `${t('tbl_days_left')} ${d.remainingDays} ${t('tbl_days')}` : t('tbl_due');
         if (d.isClosed) daysText = t('tbl_closed');
         
+        let statusTitle = '';
+        if (d.isAwaiting) {
+            statusBadge = 'bg-warning text-dark';
+            statusText = t('tbl_awaiting');
+            statusTitle = ` title="${t('tbl_awaiting_hint')}"`;
+        }
+
         let deleteBtn = '';
         if (d.isSimulated) {
             statusBadge = 'bg-primary text-white';
@@ -1395,7 +1421,7 @@ function renderTable() {
                 </div>
             </td>
             <td data-label="Status">
-                <span class="badge ${statusBadge}">${statusText}</span>${deleteBtn}
+                <span class="badge ${statusBadge}"${statusTitle}>${statusText}</span>${deleteBtn}
             </td>
         `;
         fragment.appendChild(tr);

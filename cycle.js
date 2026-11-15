@@ -8,15 +8,36 @@ function getLoanStages() {
         { id: 'monitoring', icon: 'bi-activity', color: 'warning', title: t('guide_s4_title'), content: t('guide_s4_content') },
         { id: 'liquidation', icon: 'bi-fire', color: 'danger', title: t('guide_s5_title'), content: t('guide_s5_content') },
         { id: 'maturity_conf', icon: 'bi-calendar2-check', color: 'info', title: t('guide_s6_title'), content: t('guide_s6_content') },
-        { id: 'maturity_res', icon: 'bi-hammer', color: 'danger', title: t('guide_s7_title'), content: t('guide_s7_content') }
+        { id: 'maturity_res', icon: 'bi-hammer', color: 'danger', title: t('guide_s7_title'), content: t('guide_s7_content') },
+        { id: 'closed', icon: 'bi-check-circle-fill', color: 'success', title: t('guide_s8_title'), content: t('guide_s8_content') }
     ];
+}
+
+// Koľko dní pred splatnosťou posiela Firefish e-mail "Pripomienka splatnosti investície".
+// Od tohto dňa zmluva prechádza z Monitorovania do fázy 6. Splatnosť.
+const MATURITY_REMINDER_DAYS = 7;
+
+// Zmluvy pre Cyklus: celé portfólio aktuálnej roly, NEZÁVISLE od filtra statusu
+function getCycleLoans() {
+    const appState = typeof state !== 'undefined' ? state : (window.state || null);
+    if (!appState || !appState.rawData) return [];
+    return appState.rawData.filter(d => d.role === appState.currentRoleView);
+}
+
+// Zmluva po splatnosti, ktorá je v CSV stále ACTIVE (čaká na potvrdenie / čerstvý CSV)
+function isLoanAwaiting(loan) {
+    if (!loan.isActive || loan.isSimulated || !loan.endDate) return false;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const end = new Date(loan.endDate); end.setHours(0, 0, 0, 0);
+    return today >= end;
 }
 
 // Funkcia, ktorá roztriedi reálne zmluvy na základe ich aktuálneho stavu a dátumov
 function getLoansByStage(stageId) {
     const appState = typeof state !== 'undefined' ? state : (window.state || null);
 
-    if (!appState || !appState.displayData || appState.displayData.length === 0) {
+    const cycleLoans = getCycleLoans();
+    if (!appState || cycleLoans.length === 0) {
         return []; 
     }
 
@@ -32,9 +53,12 @@ function getLoansByStage(stageId) {
     // Vypočítame simulovanú cenu BTC (reálna cena upravená o stress test)
     const effectiveBtcPrice = appState.currentBtcPrice * (1 + stressDrop / 100);
 
-    return appState.displayData.filter(loan => {
-        // Uzavreté zmluvy zobrazíme len vo fázach kde to dáva zmysel
-        if (loan.status === 'CLOSED' && stageId !== 'liquidation' && stageId !== 'maturity_res') return false;
+    return cycleLoans.filter(loan => {
+        // Ukončené zmluvy (aj predčasne splatené) patria výhradne do položky "Ukončené"
+        if (loan.isClosed || loan.status === 'CLOSED') return stageId === 'closed';
+        if (stageId === 'closed') return false;
+        // Zrušené zmluvy do cyklu nepatria
+        if (loan.status === 'CANCELED') return false;
 
         const startDate = loan.startDate ? new Date(loan.startDate) : null;
         if (startDate) startDate.setHours(0, 0, 0, 0);
@@ -67,13 +91,15 @@ function getLoansByStage(stageId) {
             case 'disbursement_res':
                 return diffStartDays > 4 && diffStartDays <= 11;
             case 'monitoring':
-                return diffStartDays > 11 && diffEndDays < 0 && !isLiquidated;
+                return diffStartDays > 11 && diffEndDays < -MATURITY_REMINDER_DAYS && !isLiquidated;
             case 'liquidation':
                 return isLiquidated; // Ak Stress Test stlačí cenu dole, pôžička spadne sem!
             case 'maturity_conf':
-                return diffEndDays >= 0 && diffEndDays <= 4 && !isLiquidated;
+                // Začína pripomienkou pred splatnosťou a trvá do 4. dňa po nej
+                return diffStartDays > 11 && diffEndDays >= -MATURITY_REMINDER_DAYS && diffEndDays <= 4 && !isLiquidated;
             case 'maturity_res':
-                return diffEndDays > 4 && !isLiquidated;
+                // Sem sa dostanú len zmluvy, ktoré sú v CSV stále otvorené viac než 4 dni po splatnosti
+                return diffStartDays > 11 && diffEndDays > 4 && !isLiquidated;
             default:
                 return false;
         }
@@ -156,10 +182,15 @@ window.switchGuideStage = function(stageId) {
                         <div class="text-end">
                             <div class="fw-bold text-body-emphasis">${Number(loan.invested || loan.due).toLocaleString()} ${currency}</div>
                             <small class="text-muted text-micro">${t('guide_maturity') || 'Splatnosť:'} ${loan.rawMaturity || '-'}</small>
+                            ${(stageId === 'closed' && loan.rawClosedAt) ? `<small class="text-success text-micro d-block">${t('guide_closed_at')} ${loan.rawClosedAt}</small>` : ''}
                         </div>
                     </div>`;
             });
-            loansHTML += `</div></div>`;
+            loansHTML += `</div>`;
+            if (matchedLoans.some(isLoanAwaiting)) {
+                loansHTML += `<div class="alert alert-warning small mt-3 mb-0"><i class="bi bi-cloud-upload me-1"></i>${t('guide_awaiting_hint')}</div>`;
+            }
+            loansHTML += `</div>`;
         } else {
             loansHTML = `<div class="mt-4 pt-3 border-top border-light-subtle text-center text-muted opacity-50">
                             <i class="bi bi-inbox fs-3 d-block mb-2"></i>
@@ -171,6 +202,7 @@ window.switchGuideStage = function(stageId) {
     contentContainer.innerHTML = `
         <div class="w-100 bg-body p-4 rounded shadow-sm border border-light-subtle">
             ${stageData.content}
+            ${stageId === 'maturity_conf' ? `<p class="text-muted small"><i class="bi bi-envelope me-1"></i>${t('guide_s6_note').replace('{days}', MATURITY_REMINDER_DAYS)}</p>` : ''}
             ${loansHTML}
             
             <div class="alert alert-secondary border-0 mt-4 mb-0 text-center small opacity-75">
