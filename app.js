@@ -365,7 +365,42 @@ function getMyId(data) {
     return bestInvId || bestBorId;
 }
 
-function parseAndInitApp(csvText) {
+// Simulovaná zmluva načítaná z localStorage: prepočíta sumy do aktuálne zobrazenej meny
+// a aktualizuje priebeh / zostávajúce dni podľa dnešného dátumu.
+function hydrateSimulation(s) {
+    s.startDate = new Date(s.startDate);
+    s.endDate = new Date(s.endDate);
+    // Backward compatibility: add orig values if missing
+    if (!s.origCurrency) {
+        s.origInvested = s.invested;
+        s.origDue = s.due;
+        s.origLiquidationPrice = s.liquidationPrice;
+        s.origCurrency = state.currency;
+    }
+    if (s.origCurrency !== state.currency && state.exchangeRates) {
+        s.invested = convertCurrency(s.origInvested, s.origCurrency, state.currency);
+        s.due = convertCurrency(s.origDue, s.origCurrency, state.currency);
+        if (s.origLiquidationPrice > 0) {
+            s.liquidationPrice = convertCurrency(s.origLiquidationPrice, s.origCurrency, state.currency);
+        }
+    } else if (s.origCurrency === state.currency) {
+        s.invested = s.origInvested;
+        s.due = s.origDue;
+        if (s.origLiquidationPrice > 0) s.liquidationPrice = s.origLiquidationPrice;
+    }
+    s.profit = s.due - s.invested;
+
+    const MS_DAY = 1000 * 60 * 60 * 24;
+    const now = new Date();
+    const totalDays = (s.endDate - s.startDate) / MS_DAY;
+    if (totalDays > 0) {
+        s.progressPct = Math.max(0, Math.min(((now - s.startDate) / MS_DAY / totalDays) * 100, 100));
+    }
+    s.remainingDays = Math.ceil((s.endDate - now) / MS_DAY);
+    return s;
+}
+
+function parseAndInitApp(csvText, restoreDisplayCurrency = false) {
     Papa.parse(csvText, {
         header: true, skipEmptyLines: true,
         complete: async function(results) {
@@ -389,6 +424,16 @@ function parseAndInitApp(csvText) {
                         state.currencySymbol = CURRENCY_SYMBOLS[state.currency] || state.currency;
                     }
                 }
+
+                // Pri obnovení stránky zachováme menu, ktorú si používateľ naposledy zvolil.
+                // Pri nahratí nového CSV sa použije mena z CSV ako doteraz.
+                if (restoreDisplayCurrency) {
+                    const savedCurrency = localStorage.getItem('firefish_display_currency');
+                    if (savedCurrency && ['EUR', 'USDC', 'USDT', 'CHF', 'CZK', 'PLN'].includes(savedCurrency)) {
+                        state.currency = savedCurrency;
+                        state.currencySymbol = CURRENCY_SYMBOLS[state.currency] || state.currency;
+                    }
+                }
             }
 
             state.myId = getMyId(results.data);
@@ -407,16 +452,7 @@ function parseAndInitApp(csvText) {
             savedSims.forEach(s => {
                 if (existingIds.has(s.id)) return; // ochrana proti duplikátom pri opakovanom importe
                 existingIds.add(s.id);
-                s.startDate = new Date(s.startDate);
-                s.endDate = new Date(s.endDate);
-                // Backward compatibility: add orig values if missing
-                if (!s.origCurrency) {
-                    s.origInvested = s.invested;
-                    s.origDue = s.due;
-                    s.origLiquidationPrice = s.liquidationPrice;
-                    s.origCurrency = state.currency;
-                }
-                state.rawData.push(s);
+                state.rawData.push(hydrateSimulation(s));
             });
 
             localStorage.setItem('firefish_display_currency', state.currency);
@@ -588,7 +624,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     
     const savedCsv = localStorage.getItem('firefish_saved_csv');
     if (savedCsv) {
-        parseAndInitApp(savedCsv);
+        parseAndInitApp(savedCsv, true);
     } else {
         const savedDisplayCurrency = localStorage.getItem('firefish_display_currency');
         const savedSimCurrency = localStorage.getItem('firefish_simulated_currency');
@@ -604,16 +640,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         const savedSims = JSON.parse(localStorage.getItem('firefish_simulated_loans') || '[]');
         if (savedSims.length > 0) {
             savedSims.forEach(s => {
-                s.startDate = new Date(s.startDate);
-                s.endDate = new Date(s.endDate);
-                // Backward compatibility: add orig values if missing
-                if (!s.origCurrency) {
-                    s.origInvested = s.invested;
-                    s.origDue = s.due;
-                    s.origLiquidationPrice = s.liquidationPrice;
-                    s.origCurrency = state.currency;
-                }
-                state.rawData.push(s);
+                state.rawData.push(hydrateSimulation(s));
             });
             
             const hasInvestments = state.rawData.some(d => d.role === 'investor');
@@ -720,12 +747,13 @@ function parseDate(dateStr, isAmericanFormat = false) {
     // --- 3. Slash format: mm/dd/yyyy (American) or dd/mm/yyyy (European) ---
     const slashMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
     if (slashMatch) {
+        // Americký formát (stĺpec "mm/dd/yyyy"): prvé číslo je mesiac, druhé deň
         let month = parseInt(slashMatch[1], 10);
         let day = parseInt(slashMatch[2], 10);
         const year = parseInt(slashMatch[3], 10);
         
-        // If American format, swap month and day
-        if (isAmericanFormat) {
+        // Európsky formát (dd/mm/yyyy): prvé číslo je deň, druhé mesiac
+        if (!isAmericanFormat) {
             [month, day] = [day, month];
         }
         
@@ -824,8 +852,8 @@ function parseRawData(data) {
         const endDate = parseDate(endDateRaw, isAmericanFormat);
         const closedAt = parseDate(closedAtRaw, isAmericanFormat);
 
-        const rawInvestorId = row['Investor id'] || 'Neznámy';
-        const rawBorrowerId = row['Borrower id'] || 'Neznámy';
+        const rawInvestorId = row['Investor id'] || t('unknown_party');
+        const rawBorrowerId = row['Borrower id'] || t('unknown_party');
         const role = (rawInvestorId === state.myId) ? 'investor' : 'borrower';
         // Escapnuté verzie pre bezpečné vloženie do innerHTML
         const investorId = escapeHtml(rawInvestorId);
@@ -1212,7 +1240,7 @@ function updateAIInsight(m, insightData) {
 
                 if (itemLTV >= 95) { 
                     // ZLIKVIDOVANÉ
-                    liquidatedDetails.push(`Zmluva <span class="fw-bold">${item.id}</span>: <span class="badge bg-dark text-danger border border-danger">${t('insight_liquidated_badge') || 'ZLIKVIDOVANÁ'}</span>`);
+                    liquidatedDetails.push(`${t('ai_contract')} <span class="fw-bold">${item.id}</span>: <span class="badge bg-dark text-danger border border-danger">${t('insight_liquidated_badge') || 'ZLIKVIDOVANÁ'}</span>`);
                 } else if (itemLTV > RISK_THRESHOLDS.LTV_HIGH) { 
                     // OHROZENÉ
                     const targetSafeLTV = 70; 
@@ -1220,9 +1248,9 @@ function updateAIInsight(m, insightData) {
                     const toAddForThisLoan = Math.max(0, neededCollateral - item.collateralBtc);
                     
                     // Text sa mení podľa toho, či to pozerá investor alebo dlžník
-                    const actionText = isInv ? '<span class="text-muted text-micro">Dlžník musí doložiť:</span> ' : '+';
+                    const actionText = isInv ? `<span class="text-muted text-micro">${t('ai_bor_must_add')}</span> ` : '+';
                     
-                    riskyLoansDetails.push(`Zmluva <span class="fw-bold">${item.id}</span>: ${actionText}<strong>${fmtBtc(toAddForThisLoan)} BTC</strong>`);
+                    riskyLoansDetails.push(`${t('ai_contract')} <span class="fw-bold">${item.id}</span>: ${actionText}<strong>${fmtBtc(toAddForThisLoan)} BTC</strong>`);
                 }
             });
 
@@ -1287,15 +1315,19 @@ function updateAIInsight(m, insightData) {
             let extraInfo = '';
             const ltv = m.riskiestLoan.ltv;
 
+            const fillMc = (key) => t(key)
+                .replace('{pos}', t('ai_risk_pos'))
+                .replace('{id}', m.riskiestLoan.id)
+                .replace('{ltv}', fmtPct(ltv));
+
             if (ltv >= 86) {
-                extraInfo = `<span class="text-danger">Kritický stav!</span> ${t('ai_risk_pos')} (<strong>${m.riskiestLoan.id}</strong>) prekročila <strong>Margin Call 3</strong> (LTV ${fmtPct(ltv)}%). Likvidácia je extrémne blízko!`;
+                extraInfo = fillMc('ai_mc3_now');
             } else if (ltv >= 79) {
-                extraInfo = `Vážne varovanie! ${t('ai_risk_pos')} (<strong>${m.riskiestLoan.id}</strong>) je v zóne <strong>Margin Call 2</strong> (LTV ${fmtPct(ltv)}%).`;
+                extraInfo = fillMc('ai_mc2_now');
             } else if (ltv >= 73) {
-                // Zachovaný tvoj prekladový kľúč z minulosti s defaultným textom ako zálohou
-                extraInfo = `Pozor, ${t('ai_risk_pos').toLowerCase()} (<strong>${m.riskiestLoan.id}</strong>) ${t('ai_mc_zone') || `je v zóne Margin Call 1 (LTV ${fmtPct(ltv)}%).`}`;
+                extraInfo = fillMc('ai_mc1_now');
             } else if (dropRequired > 0 && dropRequired < 100) {
-                extraInfo = `${t('ai_risk_pos')} (<strong>${m.riskiestLoan.id}</strong>) má LTV ${fmtPct(ltv)}%. ${t('ai_if_drop')} <strong>${fmtPct(dropRequired)}%</strong>, ${t('ai_mc1')}`;
+                extraInfo = `${t('ai_risk_pos')} (<strong>${m.riskiestLoan.id}</strong>) ${t('ai_has_ltv')} ${fmtPct(ltv)}%. ${t('ai_if_drop')} <strong>${fmtPct(dropRequired)}%</strong>, ${t('ai_mc1')}`;
             }
 
             aiMessage.innerHTML = `${t('ai_ok')} ${extraInfo}`;
@@ -1331,7 +1363,7 @@ function renderTable() {
     }
 
     tableRows.forEach(d => {
-        let ltvLabel = 'NEZNÁME'; let ltvClass = 'bg-secondary';
+        let ltvLabel = t('tbl_ltv_unknown'); let ltvClass = 'bg-secondary';
         if (d.ltv > 0 && d.ltv < RISK_THRESHOLDS.LTV_MEDIUM) { ltvLabel = 'LOW'; ltvClass = 'bg-success'; }
         else if (d.ltv >= RISK_THRESHOLDS.LTV_MEDIUM && d.ltv < RISK_THRESHOLDS.LTV_HIGH) { ltvLabel = 'MEDIUM'; ltvClass = 'bg-warning text-dark'; }
         else if (d.ltv >= RISK_THRESHOLDS.LTV_HIGH) { ltvLabel = 'HIGH'; ltvClass = 'bg-danger'; }
@@ -1406,25 +1438,27 @@ function renderTable() {
             <td data-label="ID" class="fw-bold ${d.isSimulated ? 'text-primary' : 'text-secondary'}">
                 ${d.isSimulated ? '<i class="bi bi-calculator me-1"></i>' : ''}${d.id}
             </td>
-            <td data-label="Splatnosť"><span class="fw-bold">${d.rawMaturity || '-'}</span></td>
-            <td data-label="Reálny Úrok">
+            <td data-label="${t('tbl_maturity')}"><span class="fw-bold">${d.rawMaturity || '-'}</span></td>
+            <td data-label="${t('tbl_yield')}">
                 <div class="fw-bold">${fmtPct(d.annualYield)} % <span class="text-micro text-muted">p.a.</span></div>
             </td>
-            <td data-label="Investícia / Zisk">
+            <td data-label="${isInv ? t('dyn_tbl_inv') : t('dyn_tbl_debt')}">
                 <div>${investedFmt} ${state.currencySymbol}</div>
                 <small class="${profitColor} fw-bold">${profitSign}${profitFmt} ${state.currencySymbol}</small>
             </td>
-            <td data-label="Kolaterál">
+            <td data-label="${t('tbl_col')}">
                 <div class="fw-bold text-dark"><i class="bi bi-currency-bitcoin text-warning"></i> ${colBtcFmt}</div>
                 <small class="text-muted">${colValFmt}</small>
             </td>
-            <td data-label="Riziko / Medzera">
-                <div class="mb-1"><span class="badge ${ltvClass}">${ltvLabel} (${fmtPct(d.ltv)}%)</span></div>
+            <td data-label="${t('tbl_risk')}">
+                ${d.isClosed
+                    ? '<span class="text-muted">–</span>'
+                    : `<div class="mb-1"><span class="badge ${ltvClass}">${ltvLabel} (${fmtPct(d.ltv)}%)</span></div>`}
                 ${miniLtvBar}
                 ${distText}
                 ${chiText}
             </td>
-            <td data-label="Priebeh">
+            <td data-label="${t('tbl_progress')}">
                 <div class="d-flex flex-column" style="min-width: 180px; width: 100%;">
                     <div class="d-flex justify-content-between days-left mb-1 w-100">
                         <span class="fw-bold text-dark">${fmtPct(d.progressPct)}%</span>
@@ -1438,7 +1472,7 @@ function renderTable() {
                     </div>
                 </div>
             </td>
-            <td data-label="Status">
+            <td data-label="${t('tbl_status')}">
                 <span class="badge ${statusBadge}"${statusTitle}>${statusText}</span>${deleteBtn}
             </td>
         `;
@@ -1516,7 +1550,7 @@ function renderCharts() {
             datasets: [{
                 label: t('chart_gap'),
                 data: activeRiskLoans.map(l => l.distance),
-                backgroundColor: activeRiskLoans.map(l => l.distance <= 0 ? '#000000' : (l.distance < 11.58 ? '#dc3545' : (l.distance < 23.16 ? '#ffc107' : '#20c997'))),
+                backgroundColor: activeRiskLoans.map(l => l.distance <= 0 ? '#000000' : (l.distance < 9.47 ? '#dc3545' : (l.distance < 23.16 ? '#ffc107' : '#20c997'))),
                 borderRadius: 4
             }]
         },
@@ -1592,7 +1626,7 @@ function updateStressUI(pct) {
         const stressedPrice = state.currentBtcPrice * (1 + pct / 100);
         const colorClass = pct > -20 ? 'bg-warning text-dark' : (pct > -40 ? 'bg-danger' : 'bg-dark text-white');
         stressLabel.className = 'badge shadow-sm ' + colorClass;
-        stressLabel.innerText = `Stres ${pct}%`;
+        stressLabel.innerText = `${t('badge_stress')} ${pct}%`;
         stressBtcPrice.innerHTML = `${t('stress_sim_price')} <strong>${fmtMoney(stressedPrice)} ${state.currencySymbol}</strong>`;
     }
 }

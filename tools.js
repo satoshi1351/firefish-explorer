@@ -109,7 +109,7 @@ async function renderMarketCompass() {
         }
     } catch (error) {
         console.error("Compass error:", error);
-        insightBox.innerHTML = `<div class="alert alert-light small text-muted">Nedostupné (Offline)</div>`;
+        insightBox.innerHTML = `<div class="alert alert-light small text-muted">${t('compass_offline')}</div>`;
     }
 }
 
@@ -420,11 +420,16 @@ function renderYearlyOverview() {
  
     allLoans.forEach(loan => {
         if (!loan.profit || loan.profit === 0) return;
+        if (loan.status === 'CANCELED') return;
  
         const endDate = loan.endDate ? new Date(loan.endDate) : null;
         if (!endDate) return;
  
-        const year = endDate.getFullYear();
+        // Ukončená zmluva patrí do roku, v ktorom bola SKUTOČNE ukončená (stĺpec "Closed at"),
+        // nie do roku plánovanej splatnosti — dôležité pri predčasnom splatení cez prelom roka.
+        const isClosedLoan = loan.isClosed || loan.status === 'CLOSED';
+        const closedAt = (isClosedLoan && loan.closedAt) ? new Date(loan.closedAt) : null;
+        const year = (closedAt && !isNaN(closedAt.getTime())) ? closedAt.getFullYear() : endDate.getFullYear();
  
         if (!yearlyData[year]) {
             yearlyData[year] = { realized: 0, planned: 0, accrued: 0, loanCount: 0, loans: [] };
@@ -538,7 +543,7 @@ function renderYearlyOverview() {
             loansDetailHtml += `
                 <tr class="align-middle">
                     <td class="text-secondary fw-bold font-monospace small">${loan.id}</td>
-                    <td class="small text-muted">${maturityFmt}</td>
+                    <td class="small text-muted">${maturityFmt}${(loan.isClosed && loan.rawClosedAt) ? `<span class="text-micro d-block">${t('guide_closed_at')} ${loan.rawClosedAt}</span>` : ''}</td>
                     <td>${loanStatus}</td>
                     <td class="text-end small">
                         <span class="fw-bold ${signClass}">${sign}${profitFmt} ${sym}</span>

@@ -177,7 +177,7 @@ window.switchGuideStage = function(stageId) {
                     <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center bg-body">
                         <div>
                             <span class="badge ${badgeClass} me-2">${badgeStr}</span>
-                            <span class="fw-medium">${loan.borrowerId || loan.investorId || 'Zmluva'}</span>
+                            <span class="fw-medium">${loan.borrowerId || loan.investorId || t('ai_contract')}</span>
                         </div>
                         <div class="text-end">
                             <div class="fw-bold text-body-emphasis">${Number(loan.invested || loan.due).toLocaleString()} ${currency}</div>
