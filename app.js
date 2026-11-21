@@ -1,9 +1,21 @@
+// --- OFICIÁLNE PRAHY FIREFISH (docs.firefish.io – FAQ / Collateral) ---
+// Počiatočné LTV 50 % (CHI 100 %), Margin Call 1/2/3 pri LTV 73/79/86 % (CHI 33/22/11 %),
+// likvidácia pri LTV 95 % (CHI 0 %). LTV = Amount due / hodnota kolaterálu.
+const FF_LTV = { INIT: 50, MC1: 73, MC2: 79, MC3: 86, LIQ: 95 };
+// Vzdialenosť ceny BTC k likvidačnej cene pri danom LTV (v %): 1 - LTV/95
+const ffDistAt = (ltv) => (1 - ltv / FF_LTV.LIQ) * 100;
+// CHI pri danom LTV (v %): lineárne v cene medzi LTV 50 % (100 %) a LTV 95 % (0 %)
+const ffChiAt = (ltv) => ((100 / ltv - 100 / FF_LTV.LIQ) / (100 / FF_LTV.INIT - 100 / FF_LTV.LIQ)) * 100;
+
 // --- KONŠTANTY PRE RIZIKO ---
 const RISK_THRESHOLDS = {
-    LTV_HIGH: 73,       // Zmenené zo 70 na 73 (Margin Call 1)
+    LTV_HIGH: FF_LTV.MC1,              // Margin Call 1
     LTV_MEDIUM: 40,
-    DIST_CRITICAL: 9.5, // Približná vzdialenosť k likvidácii pri LTV 86%
-    DIST_WARNING: 23.2, // Približná vzdialenosť k likvidácii pri LTV 73%
+    DIST_CRITICAL: ffDistAt(FF_LTV.MC3), // 9,47 % = Margin Call 3
+    DIST_MC2: ffDistAt(FF_LTV.MC2),      // 16,84 % = Margin Call 2
+    DIST_WARNING: ffDistAt(FF_LTV.MC1),  // 23,16 % = Margin Call 1
+    CHI_WARNING: ffChiAt(FF_LTV.MC1),    // ~33 % = Margin Call 1
+    CHI_CRITICAL: ffChiAt(FF_LTV.MC3),   // ~11 % = Margin Call 3
     CONCENTRATION_WARN: 25, 
     CONCENTRATION_CRITICAL: 35,
     PORTFOLIO_RISK_WARN: 20, 
@@ -49,7 +61,10 @@ function fmtPct(value) {
 }
 
 function fmtBtc(value) {
-    return fmtNum(value, 4);
+    // BTC bez desatinných miest nedáva zmysel (0,3467 BTC by sa zobrazilo ako "0").
+    // Vypnuté desatinné miesta = 4 miesta, zapnuté = 8 miest (presnosť na satoshi).
+    const d = state.showDecimals ? 8 : 4;
+    return value.toLocaleString('sk-SK', {maximumFractionDigits: d, minimumFractionDigits: d});
 }
 
 Chart.register(window['chartjs-plugin-annotation']);
@@ -255,8 +270,8 @@ function computeChi(d, btcPrice) {
     if (!d.collateralBtc || d.collateralBtc <= 0 || !btcPrice || btcPrice <= 0) return 0;
     const liqPrice = (d.liquidationPrice > 0)
         ? d.liquidationPrice
-        : d.due / (d.collateralBtc * 0.95);
-    const initPrice = d.due / (d.collateralBtc * 0.50);
+        : d.due / (d.collateralBtc * FF_LTV.LIQ / 100);
+    const initPrice = d.due / (d.collateralBtc * FF_LTV.INIT / 100);
     if (initPrice <= liqPrice) return 0;
     const chi = (btcPrice - liqPrice) / (initPrice - liqPrice);
     return Math.max(0, Math.min(1, chi)) * 100;
@@ -1225,12 +1240,13 @@ function updateAIInsight(m, insightData) {
     if (m.invested === 0 && m.historicalInvested === 0) {
         aiMessage.innerHTML = t('ai_no_data');
         aiIcon.classList.add('bi-robot', 'text-secondary');
-    } else if (isStressed && m.capitalAtRisk > 0) {
-        const stressedPrice = fmtMoney(state.currentBtcPrice * (1 + stressPct / 100));
+    } else if (m.capitalAtRisk > 0) {
+        const stressedPrice = fmtMoney(state.currentBtcPrice * (1 + Math.min(stressPct, 0) / 100));
         
         // --- ZÁCHRANNÉ KOLESO PRE OBOCH (INVESTOR AJ DLŽNÍK) ---
         if (dataForInsight.length > 0) {
-            const simPrice = state.currentBtcPrice * (1 + stressPct / 100);
+            // Bez stres testu sa počíta s aktuálnou cenou BTC
+            const simPrice = state.currentBtcPrice * (1 + Math.min(stressPct, 0) / 100);
             let riskyLoansDetails = [];
             let liquidatedDetails = [];
 
@@ -1238,19 +1254,26 @@ function updateAIInsight(m, insightData) {
                 if (!item.isActive || item.collateralBtc <= 0) return;
                 const itemLTV = (item.due / (item.collateralBtc * simPrice)) * 100;
 
-                if (itemLTV >= 95) { 
+                if (itemLTV >= FF_LTV.LIQ) { 
                     // ZLIKVIDOVANÉ
                     liquidatedDetails.push(`${t('ai_contract')} <span class="fw-bold">${item.id}</span>: <span class="badge bg-dark text-danger border border-danger">${t('insight_liquidated_badge') || 'ZLIKVIDOVANÁ'}</span>`);
-                } else if (itemLTV > RISK_THRESHOLDS.LTV_HIGH) { 
-                    // OHROZENÉ
-                    const targetSafeLTV = 70; 
-                    const neededCollateral = (item.due * 100) / (targetSafeLTV * simPrice);
-                    const toAddForThisLoan = Math.max(0, neededCollateral - item.collateralBtc);
+                } else if (itemLTV >= FF_LTV.MC1) { 
+                    // OHROZENÉ — Firefish posiela Margin Call e-mail, keď LTV dosiahne 73 / 79 / 86 %
+                    const mcLevel = itemLTV >= FF_LTV.MC3 ? 3 : (itemLTV >= FF_LTV.MC2 ? 2 : 1);
+                    const mcBadgeClass = mcLevel === 3 ? 'bg-danger' : (mcLevel === 2 ? 'bg-orange text-dark' : 'bg-warning text-dark');
+                    const mcBadge = `<span class="badge ${mcBadgeClass}"${mcLevel === 2 ? ' style="background-color:#fd7e14"' : ''}>MC${mcLevel} · LTV ${itemLTV.toLocaleString('sk-SK', {minimumFractionDigits: 1, maximumFractionDigits: 1})}%</span>`;
+
+                    // Minimum: dostať LTV späť pod Margin Call 1 (73 %)
+                    const neededMin = (item.due * 100) / (FF_LTV.MC1 * simPrice);
+                    const toAddMin = Math.max(0, neededMin - item.collateralBtc);
+                    // Plné zdravie: návrat na počiatočné LTV 50 % (CHI 100 %)
+                    const neededFull = (item.due * 100) / (FF_LTV.INIT * simPrice);
+                    const toAddFull = Math.max(0, neededFull - item.collateralBtc);
                     
                     // Text sa mení podľa toho, či to pozerá investor alebo dlžník
                     const actionText = isInv ? `<span class="text-muted text-micro">${t('ai_bor_must_add')}</span> ` : '+';
                     
-                    riskyLoansDetails.push(`${t('ai_contract')} <span class="fw-bold">${item.id}</span>: ${actionText}<strong>${fmtBtc(toAddForThisLoan)} BTC</strong>`);
+                    riskyLoansDetails.push(`${t('ai_contract')} <span class="fw-bold">${item.id}</span> ${mcBadge}: ${actionText}<strong>${fmtBtc(toAddMin)} BTC</strong> <span class="text-muted text-micro">(${t('ai_rescue_full')}: ${fmtBtc(toAddFull)} BTC)</span>`);
                 }
             });
 
@@ -1268,11 +1291,11 @@ function updateAIInsight(m, insightData) {
                     if (isInv) {
                         prefix = (t('insight_rescue_add_inv') || `Máš <strong>{count} ohrozenú investíciu/ie</strong>. Pre ich bezpečie musia dlžníci doložiť:`)
                             .replace('{count}', riskyLoansDetails.length)
-                            .replace('{target}', 70);
+                            .replace('{target}', FF_LTV.MC1);
                     } else {
                         prefix = (t('insight_rescue_add') || `Máš <strong>{count} ohrozenú pôžičku/y</strong>. Pre návrat do bezpečia (pod {target} % LTV) musíš doložiť:`)
                             .replace('{count}', riskyLoansDetails.length)
-                            .replace('{target}', 70);
+                            .replace('{target}', FF_LTV.MC1);
                     }
                     
                     combinedHtml += `<div>${prefix}<ul class="mb-0 mt-1 ps-3" style="font-size: 0.9em; opacity: 0.9;"><li>${riskyLoansDetails.join('</li><li>')}</li></ul></div>`;
@@ -1292,7 +1315,7 @@ function updateAIInsight(m, insightData) {
         }
         // --- KONIEC ZÁCHRANNÉHO KOLESA ---
 
-        aiMessage.innerHTML = `${t('ai_stress_warn1')} ${stressPct}% → ${stressedPrice} ${state.currencySymbol}): <strong>${fmtMoney(m.capitalAtRisk)} ${state.currencySymbol}</strong> ${t('ai_stress_warn2')} ${RISK_THRESHOLDS.LTV_HIGH}%). ${t('ai_stress_warn3')} ${fmtPct(m.riskCapitalPct)}% ${isInv ? t('ai_inv') : t('ai_bor')}.`;
+        aiMessage.innerHTML = `${t('ai_stress_warn1')} ${Math.min(stressPct, 0)}% → ${stressedPrice} ${state.currencySymbol}): <strong>${fmtMoney(m.capitalAtRisk)} ${state.currencySymbol}</strong> ${t('ai_stress_warn2')} ${RISK_THRESHOLDS.LTV_HIGH}%). ${t('ai_stress_warn3')} ${fmtPct(m.riskCapitalPct)}% ${isInv ? t('ai_inv') : t('ai_bor')}.`;
         insightBox.classList.add('danger');
         aiIcon.classList.add('bi-exclamation-triangle-fill', 'text-danger');
     } else if (isStressed && m.capitalAtRisk === 0) {
@@ -1306,7 +1329,7 @@ function updateAIInsight(m, insightData) {
         
         // --- AKTUALIZOVANÁ LOGIKA PRE MARGIN CALL 1, 2 a 3 ---
         if (m.riskiestLoan && m.riskiestLoan.ltv > 0) {
-            const mc1Price = (m.riskiestLoan.due / 0.73) / m.riskiestLoan.collateralBtc;
+            const mc1Price = (m.riskiestLoan.due / (FF_LTV.MC1 / 100)) / m.riskiestLoan.collateralBtc;
             let dropRequired = 0;
             if (state.currentBtcPrice > mc1Price) {
                 dropRequired = ((state.currentBtcPrice - mc1Price) / state.currentBtcPrice) * 100;
@@ -1320,11 +1343,11 @@ function updateAIInsight(m, insightData) {
                 .replace('{id}', m.riskiestLoan.id)
                 .replace('{ltv}', fmtPct(ltv));
 
-            if (ltv >= 86) {
+            if (ltv >= FF_LTV.MC3) {
                 extraInfo = fillMc('ai_mc3_now');
-            } else if (ltv >= 79) {
+            } else if (ltv >= FF_LTV.MC2) {
                 extraInfo = fillMc('ai_mc2_now');
-            } else if (ltv >= 73) {
+            } else if (ltv >= FF_LTV.MC1) {
                 extraInfo = fillMc('ai_mc1_now');
             } else if (dropRequired > 0 && dropRequired < 100) {
                 extraInfo = `${t('ai_risk_pos')} (<strong>${m.riskiestLoan.id}</strong>) ${t('ai_has_ltv')} ${fmtPct(ltv)}%. ${t('ai_if_drop')} <strong>${fmtPct(dropRequired)}%</strong>, ${t('ai_mc1')}`;
@@ -1383,8 +1406,8 @@ function renderTable() {
 
         // --- VYKRESLENIE CHI ---
         let chiColor = 'text-success';
-        if (d.chiPct < 50) chiColor = 'text-warning';
-        if (d.chiPct < 20) chiColor = 'text-danger';
+        if (d.chiPct < RISK_THRESHOLDS.CHI_WARNING) chiColor = 'text-warning';   // pod Margin Call 1 (CHI ~33 %)
+        if (d.chiPct < RISK_THRESHOLDS.CHI_CRITICAL) chiColor = 'text-danger';   // pod Margin Call 3 (CHI ~11 %)
 
         let chiText = (d.isActive && d.collateralBtc > 0 && typeof d.chiPct !== 'undefined')
             ? `<div class="text-micro mt-1" title="Collateral Health Index">
@@ -1533,7 +1556,7 @@ function renderCharts() {
             datasets: [{
                 label: t('chart_gap'),
                 data: activeRiskLoans.map(l => l.distance),
-                backgroundColor: activeRiskLoans.map(l => l.distance <= 0 ? '#000000' : (l.distance < 9.47 ? '#dc3545' : (l.distance < 23.16 ? '#ffc107' : '#20c997'))),
+                backgroundColor: activeRiskLoans.map(l => l.distance <= 0 ? '#000000' : (l.distance < RISK_THRESHOLDS.DIST_CRITICAL ? '#dc3545' : (l.distance < RISK_THRESHOLDS.DIST_WARNING ? '#ffc107' : '#20c997'))),
                 borderRadius: 4
             }]
         },
@@ -1547,15 +1570,15 @@ function renderCharts() {
                     clip: false, 
                     annotations: {
     lineMC1: {
-        type: 'line', yMin: 23.16, yMax: 23.16, borderColor: '#ffc107', borderWidth: 2, borderDash: [6, 4],
+        type: 'line', yMin: RISK_THRESHOLDS.DIST_WARNING, yMax: RISK_THRESHOLDS.DIST_WARNING, borderColor: '#ffc107', borderWidth: 2, borderDash: [6, 4],
         label: { display: true, content: 'Margin Call 1 (73%)', position: 'end', backgroundColor: '#ffc107', color: '#000', xAdjust: 105 }
     },
     lineMC2: {
-        type: 'line', yMin: 16.84, yMax: 16.84, borderColor: '#fd7e14', borderWidth: 2, borderDash: [6, 4],
+        type: 'line', yMin: RISK_THRESHOLDS.DIST_MC2, yMax: RISK_THRESHOLDS.DIST_MC2, borderColor: '#fd7e14', borderWidth: 2, borderDash: [6, 4],
         label: { display: true, content: 'Margin Call 2 (79%)', position: 'end', backgroundColor: '#fd7e14', color: '#000', xAdjust: 105 }
     },
     lineMC3: {
-        type: 'line', yMin: 9.47, yMax: 9.47, borderColor: '#dc3545', borderWidth: 2, borderDash: [6, 4],
+        type: 'line', yMin: RISK_THRESHOLDS.DIST_CRITICAL, yMax: RISK_THRESHOLDS.DIST_CRITICAL, borderColor: '#dc3545', borderWidth: 2, borderDash: [6, 4],
         label: { display: true, content: 'Margin Call 3 (86%)', position: 'end', backgroundColor: '#dc3545', color: '#000', xAdjust: 105 }
     },
     lineLiq: {

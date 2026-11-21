@@ -74,7 +74,7 @@ function getLoansByStage(stageId) {
         if (loan.collateralBtc && loan.collateralBtc > 0 && effectiveBtcPrice) {
             const currentBtcValue = loan.collateralBtc * effectiveBtcPrice;
             const currentLtv = (loan.due) / currentBtcValue * 100;
-            if (currentLtv >= 95) { // Likvidačná hranica LaSA
+            if (currentLtv >= (typeof FF_LTV !== 'undefined' ? FF_LTV.LIQ : 95)) { // Likvidačná hranica LaSA (LTV 95 %)
                 isLiquidated = true;
             }
         }
